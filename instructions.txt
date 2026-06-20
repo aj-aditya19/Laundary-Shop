@@ -1,0 +1,386 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║           SPARKLE DRY CLEANERS — FULL-STACK WEB APPLICATION                  ║
+║           Premium Laundry & Dry Cleaning Management Platform                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                                 TECH STACK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Frontend : React 18 + Vite + Tailwind CSS + Framer Motion
+Backend  : Node.js + Express.js
+Database : MongoDB (Atlas — free tier)
+Storage  : Cloudinary (free tier)
+Email    : Nodemailer + Gmail SMTP (free)
+Auth     : JWT (JSON Web Tokens)
+PDF      : PDFKit (server-side generation)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1 — SET UP FREE SERVICES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── MONGODB ATLAS (Free) ──────────────────────────────────────────────────────
+1. Go to https://cloud.mongodb.com → Sign up free
+2. Create a new project → "sparkle-db"
+3. Build a cluster → choose M0 FREE tier
+4. Choose provider: AWS → region closest to you
+5. Create cluster (takes ~3 minutes)
+6. Click "Database Access" → Add New Database User
+   • Username: sparkleAdmin
+   • Password: (generate a strong password — SAVE IT)
+   • Role: Atlas admin
+7. Click "Network Access" → Add IP Address → Allow Access from Anywhere (0.0.0.0/0)
+8. Click "Connect" on your cluster → "Drivers"
+   • Copy the connection string — looks like:
+   mongodb+srv://sparkleAdmin:<password>@cluster0.abc12.mongodb.net/?retryWrites=true&w=majority
+   • Replace <password> with your actual password
+   • Add your DB name: ...mongodb.net/sparkle_db?retryWrites...
+
+── CLOUDINARY (Free) ──────────────────────────────────────────────────────────
+1. Go to https://cloudinary.com → Sign up free
+2. Go to Dashboard
+3. Note down these 3 values:
+   • Cloud Name
+   • API Key
+   • API Secret
+
+── GMAIL APP PASSWORD (Free) ─────────────────────────────────────────────────
+1. Go to your Google Account → myaccount.google.com
+2. Security → 2-Step Verification (must be enabled first)
+3. Security → App Passwords
+4. Select app: Mail → Select device: Other → Type "Sparkle"
+5. Click Generate → Copy the 16-character password (shown only once!)
+   Example: abcd efgh ijkl mnop → use as: abcdefghijklmnop (no spaces)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2 — CONFIGURE ENVIRONMENT VARIABLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Go into the "backend" folder
+2. Copy .env.example to .env:
+   → On Windows:  copy .env.example .env
+   → On Mac/Linux: cp .env.example .env
+
+3. Open backend/.env and fill in ALL values:
+
+   PORT=5000
+   NODE_ENV=development
+   MONGODB_URI=mongodb+srv://sparkleAdmin:YOUR_PASSWORD@cluster0.xxx.mongodb.net/sparkle_db?retryWrites=true&w=majority
+   JWT_SECRET=paste_any_64_char_random_string_here
+   JWT_EXPIRES_IN=7d
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_api_key
+   CLOUDINARY_API_SECRET=your_api_secret
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USER=yourgmail@gmail.com
+   EMAIL_PASS=your16charapppassword
+   EMAIL_FROM=Sparkle Dry Cleaners <yourgmail@gmail.com>
+   FRONTEND_URL=http://localhost:5173
+   SHOP_NAME=Sparkle Dry Cleaners
+   SHOP_PHONE=+91-XXXXXXXXXX
+   SHOP_ADDRESS=Your Shop Address, City, State - PIN
+   SHOP_WHATSAPP=91XXXXXXXXXX
+
+   To generate JWT_SECRET, run in terminal:
+   node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+4. Go into the "frontend" folder
+5. Copy .env.example to .env:
+   → On Windows:  copy .env.example .env
+   → On Mac/Linux: cp .env.example .env
+
+6. frontend/.env content (usually no change needed for local dev):
+   VITE_API_URL=http://localhost:5000/api
+   VITE_APP_NAME=Sparkle Dry Cleaners
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3 — INSTALL DEPENDENCIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open TWO terminal windows.
+
+── Terminal 1 (Backend) ──────────────────────────────────────────────────────
+cd sparkle-dry-cleaners/backend
+npm install
+
+── Terminal 2 (Frontend) ─────────────────────────────────────────────────────
+cd sparkle-dry-cleaners/frontend
+npm install
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4 — SEED THE DATABASE (Create Admin/Staff/Customer Accounts)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In the backend terminal, run:
+
+  cd sparkle-dry-cleaners/backend
+  npm run seed
+
+This creates 3 demo accounts:
+
+  Role       Email                    Password
+  ─────────────────────────────────────────────
+  Admin    → admin@sparkle.com       Admin@1234
+  Staff    → staff@sparkle.com       Staff@1234
+  Customer → customer@example.com    Customer@1234
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5 — RUN THE APPLICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Terminal 1 — Start Backend ────────────────────────────────────────────────
+cd sparkle-dry-cleaners/backend
+npm run dev
+
+You should see:
+  ✅ MongoDB connected
+  🚀 Server running on port 5000
+
+── Terminal 2 — Start Frontend ───────────────────────────────────────────────
+cd sparkle-dry-cleaners/frontend
+npm run dev
+
+You should see:
+  VITE v5.x.x  ready in Xms
+  ➜  Local:   http://localhost:5173/
+
+── Open in Browser ───────────────────────────────────────────────────────────
+  🌐 Website:   http://localhost:5173
+  🔧 API:       http://localhost:5000/api/health
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BUILD COMMANDS (Production)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Frontend build (generates static files in frontend/dist/):
+  cd frontend && npm run build
+
+Backend production start:
+  cd backend && npm start
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROJECT STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+sparkle-dry-cleaners/
+├── backend/
+│   ├── src/
+│   │   ├── server.js              ← Main entry point
+│   │   ├── controllers/           ← Business logic
+│   │   │   ├── auth.controller.js
+│   │   │   ├── order.controller.js
+│   │   │   ├── garment.controller.js
+│   │   │   ├── invoice.controller.js
+│   │   │   └── analytics.controller.js
+│   │   ├── models/                ← MongoDB schemas
+│   │   │   ├── User.model.js
+│   │   │   ├── Order.model.js
+│   │   │   ├── Invoice.model.js
+│   │   │   └── Notification.model.js
+│   │   ├── routes/                ← API endpoints
+│   │   │   ├── auth.routes.js
+│   │   │   ├── order.routes.js
+│   │   │   ├── customer.routes.js
+│   │   │   ├── staff.routes.js
+│   │   │   ├── garment.routes.js
+│   │   │   ├── invoice.routes.js
+│   │   │   ├── notification.routes.js
+│   │   │   ├── analytics.routes.js
+│   │   │   └── tracking.routes.js
+│   │   ├── middleware/
+│   │   │   └── auth.middleware.js ← JWT + Role protection
+│   │   ├── services/
+│   │   │   └── email.service.js   ← Nodemailer templates
+│   │   ├── config/
+│   │   │   └── cloudinary.js      ← Image upload config
+│   │   └── utils/
+│   │       ├── tagGenerator.js    ← DC-YYYY-XXXX IDs
+│   │       └── seed.js            ← Demo data seeder
+│   ├── .env.example
+│   └── package.json
+│
+└── frontend/
+    ├── src/
+    │   ├── main.jsx               ← React entry
+    │   ├── App.jsx                ← Router + auth guard
+    │   ├── styles/globals.css     ← Tailwind + custom CSS
+    │   ├── data/index.js          ← All static content (JSON-style)
+    │   ├── services/api.js        ← All API calls (axios)
+    │   ├── context/AuthContext.jsx← Auth state management
+    │   ├── components/
+    │   │   ├── common/Navbar.jsx
+    │   │   ├── hero/HeroSection.jsx       ← 3D washing machine
+    │   │   ├── sections/
+    │   │   │   ├── ServicesSection.jsx    ← Tilt cards
+    │   │   │   ├── HowItWorksSection.jsx  ← Timeline
+    │   │   │   ├── TrackingPreviewSection.jsx
+    │   │   │   └── OtherSections.jsx      ← Safety/FAQ/Contact/Footer
+    │   │   └── dashboard/
+    │   │       ├── DashboardLayout.jsx    ← Sidebar layout
+    │   │       └── DashboardWidgets.jsx   ← Reusable components
+    │   └── pages/
+    │       ├── LandingPage.jsx
+    │       ├── LoginPage.jsx
+    │       ├── RegisterPage.jsx
+    │       ├── TrackPage.jsx
+    │       ├── NotFound.jsx
+    │       └── dashboard/
+    │           ├── CustomerDashboard.jsx
+    │           ├── StaffDashboard.jsx
+    │           ├── AdminDashboard.jsx
+    │           ├── OrderDetail.jsx
+    │           └── CreateOrder.jsx
+    ├── .env.example
+    ├── index.html
+    ├── vite.config.js
+    ├── tailwind.config.js
+    └── package.json
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+API ENDPOINTS REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+AUTH
+  POST   /api/auth/register         Register new customer
+  POST   /api/auth/login            Login (returns JWT)
+  GET    /api/auth/me               Get current user [Auth]
+  PUT    /api/auth/profile          Update profile [Auth]
+  PUT    /api/auth/change-password  Change password [Auth]
+
+ORDERS
+  GET    /api/orders                List orders [Auth]
+  POST   /api/orders                Create order [Staff+]
+  GET    /api/orders/:id            Get order [Auth]
+  PUT    /api/orders/:id/status     Update status [Staff+]
+  POST   /api/orders/:id/payment-proof  Upload payment [Auth]
+  POST   /api/orders/:id/verify-payment Verify payment [Staff+]
+
+TRACKING (PUBLIC)
+  GET    /api/track/:tagId          Track order by Tag ID
+
+CUSTOMERS
+  GET    /api/customers             List customers [Staff+]
+  POST   /api/customers             Create customer [Staff+]
+  GET    /api/customers/:id         Get customer [Staff+]
+
+STAFF
+  GET    /api/staff                 List staff [Manager+]
+  POST   /api/staff                 Add staff [Manager+]
+  PUT    /api/staff/:id             Update staff [Manager+]
+
+GARMENTS
+  POST   /api/garments/:orderId/:idx/photos     Upload photos [Staff+]
+  PUT    /api/garments/:orderId/:idx/condition  Update condition [Staff+]
+  DELETE /api/garments/:orderId/:idx/photos/:pi Delete photo [Staff+]
+
+INVOICES
+  GET    /api/invoices              List invoices [Auth]
+  POST   /api/invoices/generate/:orderId  Generate invoice [Staff+]
+  GET    /api/invoices/:id/download Download PDF [Auth]
+
+NOTIFICATIONS
+  GET    /api/notifications         Get notifications [Auth]
+  PUT    /api/notifications/:id/read  Mark read [Auth]
+  PUT    /api/notifications/read-all  Mark all read [Auth]
+
+ANALYTICS
+  GET    /api/analytics/dashboard   Dashboard stats [Staff+]
+  GET    /api/analytics/customer    Customer stats [Auth]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ROLE PERMISSIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  customer  → View own orders, track, download invoices, upload payment proof
+  staff     → All customer permissions + create orders, update status,
+              upload garment photos, manage conditions, verify payments
+  manager   → All staff permissions + manage staff, view analytics
+  admin     → Full access to everything
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FREE DEPLOYMENT (OPTIONAL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Backend → Render.com (Free) ───────────────────────────────────────────────
+1. Push project to GitHub
+2. Go to https://render.com → New Web Service
+3. Connect your GitHub repo → select "backend" as root directory
+4. Build Command: npm install
+5. Start Command: npm start
+6. Add all environment variables from backend/.env
+7. Change FRONTEND_URL to your Vercel URL (see below)
+8. Deploy → copy your Render URL (e.g. https://sparkle-api.onrender.com)
+
+── Frontend → Vercel (Free) ──────────────────────────────────────────────────
+1. Go to https://vercel.com → New Project
+2. Import your GitHub repo → set root directory to "frontend"
+3. Build Command: npm run build
+4. Output Directory: dist
+5. Add environment variable:
+   VITE_API_URL = https://sparkle-api.onrender.com/api
+6. Deploy → your site is live!
+
+NOTE: Free Render instances spin down after 15 min of inactivity.
+First request may take 30-60 seconds to wake up.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CUSTOMISING THE SHOP DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Shop name, address, hours, prices → frontend/src/data/index.js
+Email templates                   → backend/src/services/email.service.js
+Garment types & prices            → frontend/src/data/index.js (garmentTypes)
+Backend shop info                 → backend/.env (SHOP_NAME, SHOP_PHONE etc.)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ "MongoDB connection error"
+   → Check MONGODB_URI in backend/.env
+   → Ensure IP 0.0.0.0/0 is whitelisted in MongoDB Atlas Network Access
+   → Ensure password has no special chars that need URL-encoding
+
+❌ "Cannot find module" errors
+   → Run npm install in both backend/ and frontend/
+
+❌ Photos not uploading
+   → Check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+
+❌ Emails not sending
+   → Check EMAIL_USER and EMAIL_PASS (must be App Password, not Gmail password)
+   → Ensure 2-Step Verification is ON for Gmail
+   → Email errors are non-fatal — app continues without email
+
+❌ CORS errors in browser
+   → Ensure FRONTEND_URL in backend/.env matches exactly where frontend runs
+   → Default: http://localhost:5173
+
+❌ Port already in use
+   → Backend: change PORT in backend/.env (e.g. PORT=5001)
+   → Frontend: vite will auto-pick next port, or add --port 5174 to dev script
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUICK START (COPY-PASTE COMMANDS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Terminal 1
+cd sparkle-dry-cleaners/backend
+cp .env.example .env        # then fill in your values!
+npm install
+npm run seed
+npm run dev
+
+# Terminal 2
+cd sparkle-dry-cleaners/frontend
+cp .env.example .env
+npm install
+npm run dev
+
+# Open: http://localhost:5173
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Built with ❤️  — Sparkle Dry Cleaners Platform v1.0.0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

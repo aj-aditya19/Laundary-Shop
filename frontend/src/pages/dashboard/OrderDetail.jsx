@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Camera, CheckCircle, Download, ChevronDown,
-  Package, Waves, Wind, Zap, Bell, Truck, RefreshCw, Upload
+  ArrowLeft, Camera, CheckCircle, Download,
+  ChevronDown, Package, Waves, Wind, Zap,
+  Bell, Truck, RefreshCw, Upload
 } from 'lucide-react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { StatusBadge, LoadingSpinner } from '../../components/dashboard/DashboardWidgets';
@@ -13,19 +13,28 @@ import { orderStatuses } from '../../data';
 import toast from 'react-hot-toast';
 
 const STAGES = [
-  { key: 'received', label: 'Received', icon: Package, emoji: '📦' },
-  { key: 'washing', label: 'Washing', icon: Waves, emoji: '🌊' },
-  { key: 'dry_cleaning', label: 'Dry Cleaning', icon: Wind, emoji: '💨' },
-  { key: 'ironing', label: 'Ironing', icon: Zap, emoji: '⚡' },
+  { key: 'received',      label: 'Received',     icon: Package,     emoji: '📦' },
+  { key: 'washing',       label: 'Washing',       icon: Waves,       emoji: '🌊' },
+  { key: 'dry_cleaning',  label: 'Dry Cleaning',  icon: Wind,        emoji: '💨' },
+  { key: 'ironing',       label: 'Ironing',       icon: Zap,         emoji: '⚡' },
   { key: 'quality_check', label: 'Quality Check', icon: CheckCircle, emoji: '🔍' },
-  { key: 'ready', label: 'Ready', icon: Bell, emoji: '🎉' },
-  { key: 'delivered', label: 'Delivered', icon: Truck, emoji: '✅' },
+  { key: 'ready',         label: 'Ready',         icon: Bell,        emoji: '🎉' },
+  { key: 'delivered',     label: 'Delivered',     icon: Truck,       emoji: '✅' },
+];
+
+const CONDITIONS = [
+  { field: 'hasStain',       label: 'Stain' },
+  { field: 'hasTear',        label: 'Tear' },
+  { field: 'hasColorFade',   label: 'Color Fade' },
+  { field: 'looseStitching', label: 'Loose Stitching' },
+  { field: 'missingButton',  label: 'Missing Button' },
 ];
 
 export default function OrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -37,6 +46,7 @@ export default function OrderDetail() {
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [paymentProofFile, setPaymentProofFile] = useState(null);
   const [uploadingPayment, setUploadingPayment] = useState(false);
+
   const fileInputRef = useRef(null);
   const paymentInputRef = useRef(null);
 
@@ -150,78 +160,80 @@ export default function OrderDetail() {
   if (!order) return null;
 
   const currentIndex = STAGES.findIndex(s => s.key === order.status);
-  const statusInfo = orderStatuses.find(s => s.key === order.status);
-  const progressPct = currentIndex >= 0 ? (currentIndex / (STAGES.length - 1)) * 100 : 0;
+  const statusInfo   = orderStatuses.find(s => s.key === order.status);
+  const progressPct  = currentIndex >= 0 ? (currentIndex / (STAGES.length - 1)) * 100 : 0;
 
   return (
     <DashboardLayout title={`Order ${order.tagId}`}>
-      <div className="max-w-5xl mx-auto space-y-5">
-        {/* Back + Header */}
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="text-white/40 hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all">
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+
+        {/* Back + header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 8, color: 'var(--text-muted)', display: 'flex' }}
+          >
             <ArrowLeft size={18} />
           </button>
-          <div className="flex-1 flex flex-wrap items-center gap-3">
-            <h2 className="font-mono font-bold text-sky-400 text-xl">{order.tagId}</h2>
-            <StatusBadge status={order.status} />
-            <span className={`status-badge ${order.paymentStatus === 'paid' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
-              {order.paymentStatus === 'paid' ? '✅ Paid' : '⏳ Unpaid'}
-            </span>
+          <span style={{ fontFamily: 'Courier New, monospace', fontWeight: 800, fontSize: '1.3rem', color: 'var(--primary)' }}>
+            {order.tagId}
+          </span>
+          <StatusBadge status={order.status} />
+          <span
+            className="badge"
+            style={{
+              backgroundColor: order.paymentStatus === 'paid' ? '#e8f5e9' : '#fff8e1',
+              color: order.paymentStatus === 'paid' ? '#2e7d32' : '#f57f17',
+            }}
+          >
+            {order.paymentStatus === 'paid' ? '✅ Paid' : '⏳ Unpaid'}
+          </span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            {isStaff && !order.invoiceGenerated && (
+              <button className="btn btn-ghost btn-sm" onClick={handleGenerateInvoice} disabled={generatingInvoice}>
+                {generatingInvoice ? <span className="spinner" /> : '🧾'} Generate Invoice
+              </button>
+            )}
+            {order.invoiceGenerated && invoice && (
+              <a href={invoiceAPI.downloadUrl(invoice._id)} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">
+                <Download size={14} /> Download PDF
+              </a>
+            )}
           </div>
-          {isStaff && !order.invoiceGenerated && (
-            <button onClick={handleGenerateInvoice} disabled={generatingInvoice}
-              className="btn-ghost text-sm flex items-center gap-2">
-              {generatingInvoice ? <div className="w-4 h-4 spinner" /> : '🧾'} Generate Invoice
-            </button>
-          )}
-          {order.invoiceGenerated && invoice && (
-            <a href={invoiceAPI.downloadUrl(invoice._id)} target="_blank" rel="noreferrer"
-              className="btn-ghost text-sm flex items-center gap-2">
-              <Download size={14} /> Download PDF
-            </a>
-          )}
         </div>
 
-        {/* Progress Bar */}
-        <div className="glass-card p-6">
-          <div className="relative mb-6">
-            <div className="absolute top-5 left-0 right-0 h-1 bg-white/5 rounded-full" />
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPct}%` }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-              className="absolute top-5 left-0 h-1 bg-gradient-to-r from-sky-400 to-cyan-400 rounded-full shadow-lg shadow-sky-400/30"
-            />
-            <div className="relative flex justify-between">
+        {/* Progress tracker */}
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div style={{ position: 'relative', paddingBottom: 48, marginBottom: 16 }}>
+            {/* Track */}
+            <div style={{
+              position: 'absolute', top: 20, left: 0, right: 0,
+              height: 3, background: 'var(--border)', borderRadius: 99,
+            }} />
+            {/* Progress fill */}
+            <div style={{
+              position: 'absolute', top: 20, left: 0,
+              height: 3, width: `${progressPct}%`,
+              background: 'var(--primary)', borderRadius: 99,
+            }} />
+            {/* Stage dots */}
+            <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between' }}>
               {STAGES.map((stage, i) => {
                 const Icon = stage.icon;
-                const done = i <= currentIndex;
+                const done   = i <= currentIndex;
                 const active = i === currentIndex;
                 return (
-                  <div key={stage.key} className="flex flex-col items-center gap-2">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: i * 0.07, type: 'spring' }}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center border-2 z-10 relative transition-all ${
-                        active ? 'border-sky-400 bg-sky-400/20 shadow-lg shadow-sky-400/40'
-                        : done ? 'border-emerald-400 bg-emerald-400/15'
-                        : 'border-white/10 bg-navy-950'
-                      }`}
-                    >
-                      {active && (
-                        <motion.div
-                          animate={{ scale: [1, 1.4, 1], opacity: [0.5, 0, 0.5] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                          className="absolute inset-0 rounded-full border border-sky-400/50"
-                        />
-                      )}
+                  <div key={stage.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <div className={`stage-dot ${active ? 'active' : done ? 'done' : ''}`}>
                       {done && !active
-                        ? <CheckCircle size={16} className="text-emerald-400" />
-                        : <Icon size={15} className={active ? 'text-sky-400' : 'text-white/20'} />
+                        ? <CheckCircle size={15} style={{ color: '#4caf50' }} />
+                        : <Icon size={14} style={{ color: active ? 'var(--primary)' : done ? '#4caf50' : 'var(--border)' }} />
                       }
-                    </motion.div>
-                    <span className={`text-[10px] text-center leading-tight w-14 hidden sm:block ${done ? 'text-white/60' : 'text-white/20'}`}>
+                    </div>
+                    <span
+                      className={`stage-label ${active ? 'active' : done ? 'done' : ''}`}
+                      style={{ fontSize: '0.7rem' }}
+                    >
                       {stage.label}
                     </span>
                   </div>
@@ -230,356 +242,450 @@ export default function OrderDetail() {
             </div>
           </div>
 
-          {/* Current status */}
-          <div className="text-center py-4 rounded-xl" style={{ background: `${statusInfo?.color}12`, border: `1px solid ${statusInfo?.color}25` }}>
-            <div className="text-3xl mb-1">{STAGES[currentIndex]?.emoji}</div>
-            <div className="font-display font-bold text-white">{STAGES[currentIndex]?.label}</div>
-            {order.status === 'ready' && <p className="text-emerald-400 text-sm mt-1">Ready for collection!</p>}
+          {/* Status callout */}
+          <div style={{
+            textAlign: 'center', padding: '16px',
+            background: `${statusInfo?.color || 'var(--bg)'}18`,
+            border: `1px solid ${statusInfo?.color || 'var(--border)'}30`,
+            borderRadius: 12,
+          }}>
+            <div style={{ fontSize: '2rem', marginBottom: 4 }}>{STAGES[currentIndex]?.emoji}</div>
+            <div style={{ fontWeight: 700, color: 'var(--text)' }}>{STAGES[currentIndex]?.label}</div>
+            {order.status === 'ready' && (
+              <p style={{ color: '#2e7d32', fontWeight: 600, fontSize: '0.88rem', marginTop: 4 }}>
+                Ready for collection!
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-5">
-          {/* Left column */}
-          <div className="lg:col-span-2 space-y-5">
+        {/* Main 2-col layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20, alignItems: 'start' }}>
+
+          {/* Left */}
+          <div>
             {/* Order info */}
-            <div className="glass-card p-6">
-              <h3 className="font-display font-semibold text-white mb-4">Order Information</h3>
-              <div className="grid sm:grid-cols-2 gap-4 text-sm">
+            <div className="card" style={{ marginBottom: 16 }}>
+              <h3 style={{ marginBottom: 16 }}>Order Information</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 {[
-                  { label: 'Customer', value: order.customerName },
-                  { label: 'Phone', value: order.customerPhone },
-                  { label: 'Email', value: order.customerEmail || '—' },
-                  { label: 'Service Type', value: order.serviceType === 'express' ? '⚡ Express' : '📦 Normal' },
-                  { label: 'Order Date', value: new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
-                  { label: 'Expected Ready', value: new Date(order.expectedCompletionDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
-                  { label: 'Total Amount', value: `₹${order.totalAmount}` },
-                  { label: 'Payment Status', value: order.paymentStatus },
+                  { label: 'Customer',      value: order.customerName },
+                  { label: 'Phone',         value: order.customerPhone },
+                  { label: 'Email',         value: order.customerEmail || '—' },
+                  { label: 'Service Type',  value: order.serviceType === 'express' ? '⚡ Express' : '📦 Normal' },
+                  { label: 'Order Date',    value: new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
+                  { label: 'Expected Ready',value: new Date(order.expectedCompletionDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
+                  { label: 'Total Amount',  value: `₹${order.totalAmount}` },
+                  { label: 'Payment',       value: order.paymentStatus },
                 ].map(({ label, value }) => (
-                  <div key={label} className="flex flex-col gap-0.5">
-                    <span className="text-white/30 text-xs uppercase tracking-wider">{label}</span>
-                    <span className="text-white/80 capitalize">{value}</span>
+                  <div key={label}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 3 }}>
+                      {label}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text)', textTransform: 'capitalize' }}>{value}</div>
                   </div>
                 ))}
               </div>
               {order.notes && (
-                <div className="mt-4 pt-4 border-t border-white/5">
-                  <span className="text-white/30 text-xs uppercase tracking-wider block mb-1">Notes</span>
-                  <p className="text-white/60 text-sm">{order.notes}</p>
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 4 }}>
+                    Notes
+                  </div>
+                  <p style={{ fontSize: '0.88rem' }}>{order.notes}</p>
                 </div>
               )}
             </div>
 
             {/* Garments */}
-            <div className="glass-card p-6">
-              <h3 className="font-display font-semibold text-white mb-4">Garments ({order.garments.length})</h3>
-              <div className="space-y-3">
+            <div className="card" style={{ marginBottom: 16 }}>
+              <h3 style={{ marginBottom: 16 }}>Garments ({order.garments.length})</h3>
+              <div>
                 {order.garments.map((garment, i) => (
-                  <div key={i} className="border border-white/5 rounded-xl overflow-hidden">
+                  <div
+                    key={i}
+                    style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', marginBottom: 8 }}
+                  >
+                    {/* Garment header row */}
                     <div
-                      className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/3 transition-colors"
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '12px 16px', cursor: 'pointer', backgroundColor: 'var(--surface)',
+                      }}
                       onClick={() => setActiveGarment(activeGarment === i ? null : i)}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-sky-500/15 flex items-center justify-center text-sm">👔</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 34, height: 34, borderRadius: 8, background: '#f5eef6',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem',
+                        }}>
+                          👔
+                        </div>
                         <div>
-                          <div className="font-medium text-white text-sm">{garment.type}</div>
-                          <div className="text-white/40 text-xs">{garment.category} • {garment.serviceType?.replace('_', ' ')}</div>
+                          <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.9rem' }}>{garment.type}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {garment.category} • {garment.serviceType?.replace('_', ' ')}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <div className="text-white/70 text-sm">₹{garment.totalPrice}</div>
-                          <div className="text-white/30 text-xs">×{garment.quantity} @ ₹{garment.unitPrice}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.9rem' }}>₹{garment.totalPrice}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>×{garment.quantity} @ ₹{garment.unitPrice}</div>
                         </div>
-                        <motion.div animate={{ rotate: activeGarment === i ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                          <ChevronDown size={16} className="text-white/40" />
-                        </motion.div>
+                        <ChevronDown
+                          size={16}
+                          style={{
+                            color: 'var(--text-muted)',
+                            transform: activeGarment === i ? 'rotate(180deg)' : 'none',
+                          }}
+                        />
                       </div>
                     </div>
 
-                    <AnimatePresence>
-                      {activeGarment === i && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="border-t border-white/5"
-                        >
-                          <div className="p-4 space-y-4">
-                            {/* Condition */}
-                            <div>
-                              <h4 className="text-white/50 text-xs uppercase tracking-wider mb-2">Condition Report</h4>
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {[
-                                  { field: 'hasStain', label: 'Stain' },
-                                  { field: 'hasTear', label: 'Tear' },
-                                  { field: 'hasColorFade', label: 'Color Fade' },
-                                  { field: 'looseStitching', label: 'Loose Stitching' },
-                                  { field: 'missingButton', label: 'Missing Button' },
-                                ].map(({ field, label }) => (
-                                  <label key={field} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs cursor-pointer transition-all ${
-                                    garment.condition?.[field]
-                                      ? 'bg-red-500/15 border border-red-500/30 text-red-400'
-                                      : 'bg-white/3 border border-white/10 text-white/40'
-                                  } ${isStaff ? 'cursor-pointer hover:border-white/20' : 'cursor-default'}`}>
-                                    <input
-                                      type="checkbox"
-                                      className="sr-only"
-                                      checked={garment.condition?.[field] || false}
-                                      disabled={!isStaff}
-                                      onChange={e => isStaff && handleConditionUpdate(i, field, e.target.checked)}
-                                    />
-                                    <span className={garment.condition?.[field] ? '✓' : '○'} />
-                                    {label}
-                                  </label>
-                                ))}
-                              </div>
-                              {garment.condition?.otherIssues && (
-                                <p className="mt-2 text-white/50 text-xs">Other: {garment.condition.otherIssues}</p>
-                              )}
-                            </div>
+                    {/* Expanded garment detail */}
+                    {activeGarment === i && (
+                      <div style={{ borderTop: '1px solid var(--border)', padding: 16 }}>
+                        {/* Condition */}
+                        <div style={{ marginBottom: 14 }}>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 8 }}>
+                            Condition Report
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {CONDITIONS.map(({ field, label }) => (
+                              <label
+                                key={field}
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                                  padding: '5px 12px', borderRadius: 8, fontSize: '0.8rem',
+                                  cursor: isStaff ? 'pointer' : 'default',
+                                  border: `1px solid ${garment.condition?.[field] ? '#f5c6c6' : 'var(--border)'}`,
+                                  backgroundColor: garment.condition?.[field] ? '#fdecea' : 'var(--surface)',
+                                  color: garment.condition?.[field] ? '#c62828' : 'var(--text-muted)',
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  style={{ display: 'none' }}
+                                  checked={garment.condition?.[field] || false}
+                                  disabled={!isStaff}
+                                  onChange={e => isStaff && handleConditionUpdate(i, field, e.target.checked)}
+                                />
+                                {garment.condition?.[field] ? '✓' : '○'} {label}
+                              </label>
+                            ))}
+                          </div>
+                          {garment.condition?.otherIssues && (
+                            <p style={{ marginTop: 6, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              Other: {garment.condition.otherIssues}
+                            </p>
+                          )}
+                        </div>
 
-                            {/* Photos */}
-                            <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-white/50 text-xs uppercase tracking-wider">Photos ({garment.photos?.length || 0})</h4>
-                                {isStaff && (
-                                  <>
-                                    <input
-                                      type="file"
-                                      ref={fileInputRef}
-                                      multiple
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={e => handlePhotoUpload(e, i)}
-                                    />
-                                    <button
-                                      onClick={() => { setActiveGarment(i); fileInputRef.current?.click(); }}
-                                      disabled={uploadingPhotos}
-                                      className="flex items-center gap-1.5 text-sky-400 hover:text-sky-300 text-xs transition-colors"
-                                    >
-                                      {uploadingPhotos ? <div className="w-3 h-3 spinner" /> : <Camera size={13} />}
-                                      Add Photos
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                              {garment.photos?.length > 0 ? (
-                                <div className="grid grid-cols-4 gap-2">
-                                  {garment.photos.map((photo, pi) => (
-                                    <div key={pi} className="aspect-square rounded-lg overflow-hidden bg-white/5 relative group">
-                                      <img src={photo.url} alt={`Garment ${i} photo ${pi}`} className="w-full h-full object-cover" />
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-white/25 text-xs">No photos uploaded yet</p>
-                              )}
+                        {/* Photos */}
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                              Photos ({garment.photos?.length || 0})
                             </div>
-
-                            {garment.specialInstructions && (
-                              <div>
-                                <h4 className="text-white/50 text-xs uppercase tracking-wider mb-1">Special Instructions</h4>
-                                <p className="text-white/60 text-sm">{garment.specialInstructions}</p>
-                              </div>
+                            {isStaff && (
+                              <>
+                                <input
+                                  type="file"
+                                  ref={fileInputRef}
+                                  multiple
+                                  accept="image/*"
+                                  style={{ display: 'none' }}
+                                  onChange={e => handlePhotoUpload(e, i)}
+                                />
+                                <button
+                                  onClick={() => { setActiveGarment(i); fileInputRef.current?.click(); }}
+                                  disabled={uploadingPhotos}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    color: 'var(--primary)', fontSize: '0.82rem', fontWeight: 600,
+                                  }}
+                                >
+                                  {uploadingPhotos ? <span className="spinner" /> : <Camera size={13} />}
+                                  Add Photos
+                                </button>
+                              </>
                             )}
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                          {garment.photos?.length > 0 ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                              {garment.photos.map((photo, pi) => (
+                                <div key={pi} style={{ aspectRatio: '1', borderRadius: 8, overflow: 'hidden', backgroundColor: 'var(--bg)' }}>
+                                  <img src={photo.url} alt={`Garment photo ${pi + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No photos uploaded yet</p>
+                          )}
+                        </div>
+
+                        {garment.specialInstructions && (
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 4 }}>
+                              Special Instructions
+                            </div>
+                            <p style={{ fontSize: '0.88rem' }}>{garment.specialInstructions}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
 
               {/* Total */}
-              <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
-                <span className="text-white/40">Total</span>
-                <span className="font-display font-bold text-white text-xl">₹{order.totalAmount}</span>
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Total</span>
+                <span style={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--text)' }}>₹{order.totalAmount}</span>
               </div>
             </div>
 
-            {/* Status History */}
-            <div className="glass-card p-6">
-              <h3 className="font-display font-semibold text-white mb-4">Activity Timeline</h3>
-              <div className="space-y-3">
-                {[...order.statusHistory].reverse().map((h, i) => {
-                  const stage = STAGES.find(s => s.key === h.status);
-                  return (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="flex items-start gap-3"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0 text-sm mt-0.5">
-                        {stage?.emoji || '📌'}
+            {/* Activity timeline */}
+            <div className="card">
+              <h3 style={{ marginBottom: 16 }}>Activity Timeline</h3>
+              {[...order.statusHistory].reverse().map((h, i) => {
+                const stage = STAGES.find(s => s.key === h.status);
+                return (
+                  <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: '50%',
+                      background: 'var(--bg)', border: '1px solid var(--border)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1rem', flexShrink: 0,
+                    }}>
+                      {stage?.emoji || '📌'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)' }}>
+                          {stage?.label || h.status}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+                          {new Date(h.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-white/80 text-sm font-medium">{stage?.label || h.status}</span>
-                          <span className="text-white/25 text-xs">{new Date(h.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                        {h.updatedByName && <p className="text-white/30 text-xs">by {h.updatedByName}</p>}
-                        {h.notes && <p className="text-white/50 text-xs mt-0.5 italic">"{h.notes}"</p>}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
+                      {h.updatedByName && (
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>by {h.updatedByName}</p>
+                      )}
+                      {h.notes && (
+                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2, fontStyle: 'italic' }}>"{h.notes}"</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Right column */}
-          <div className="space-y-5">
-            {/* Update Status (staff only) */}
+          {/* Right sidebar */}
+          <div>
+            {/* Update Status — staff only */}
             {isStaff && (
-              <div className="glass-card p-5">
-                <h3 className="font-display font-semibold text-white mb-4">Update Status</h3>
-                <div className="space-y-3">
+              <div className="card" style={{ marginBottom: 16 }}>
+                <h3 style={{ marginBottom: 14 }}>Update Status</h3>
+                <div className="form-group">
                   <select
+                    className="select-field"
                     value={newStatus}
                     onChange={e => setNewStatus(e.target.value)}
-                    className="input-field"
                   >
                     {STAGES.map(s => (
                       <option key={s.key} value={s.key}>{s.emoji} {s.label}</option>
                     ))}
                   </select>
+                </div>
+                <div className="form-group">
                   <textarea
+                    className="input-field"
                     value={statusNotes}
                     onChange={e => setStatusNotes(e.target.value)}
                     placeholder="Optional notes..."
-                    className="input-field resize-none text-sm"
                     rows={2}
+                    style={{ resize: 'none', fontSize: '0.88rem' }}
                   />
-                  <button
-                    onClick={handleStatusUpdate}
-                    disabled={updating || newStatus === order.status}
-                    className="btn-primary w-full flex items-center justify-center gap-2"
-                  >
-                    {updating ? <div className="w-4 h-4 spinner" /> : <RefreshCw size={15} />}
-                    Update Status
-                  </button>
                 </div>
+                <button
+                  className="btn btn-primary btn-full"
+                  onClick={handleStatusUpdate}
+                  disabled={updating || newStatus === order.status}
+                  style={{ height: 42 }}
+                >
+                  {updating ? <span className="spinner" /> : <><RefreshCw size={15} /> Update Status</>}
+                </button>
               </div>
             )}
 
             {/* Payment */}
-            <div className="glass-card p-5">
-              <h3 className="font-display font-semibold text-white mb-4">Payment</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/40">Amount Due</span>
-                  <span className="font-bold text-white">₹{order.totalAmount}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/40">Status</span>
-                  <span className={order.paymentStatus === 'paid' ? 'text-emerald-400' : 'text-amber-400'}>
-                    {order.paymentStatus === 'paid' ? '✅ Paid' : '⏳ Pending'}
-                  </span>
-                </div>
-
-                {order.paymentStatus !== 'paid' && (
-                  <>
-                    {/* QR placeholder */}
-                    <div className="bg-white/3 border border-white/10 rounded-xl p-4 text-center">
-                      <div className="w-20 h-20 bg-white rounded-lg mx-auto mb-2 flex items-center justify-center">
-                        <div className="grid grid-cols-4 gap-0.5">
-                          {Array.from({ length: 16 }).map((_, i) => (
-                            <div key={i} className={`w-3 h-3 ${Math.random() > 0.5 ? 'bg-black' : 'bg-white'} rounded-[1px]`} />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-white/40 text-xs">Scan to pay via UPI / Google Pay</p>
-                    </div>
-
-                    {/* Upload proof (customer) */}
-                    {!isStaff && (
-                      <div>
-                        <input ref={paymentInputRef} type="file" accept="image/*" className="hidden"
-                          onChange={e => setPaymentProofFile(e.target.files[0])} />
-                        <button onClick={() => paymentInputRef.current?.click()} className="btn-ghost w-full text-sm flex items-center justify-center gap-2">
-                          <Upload size={15} /> Upload Payment Screenshot
-                        </button>
-                        {paymentProofFile && (
-                          <div className="mt-2 flex items-center justify-between glass rounded-lg p-3">
-                            <span className="text-white/60 text-xs truncate">{paymentProofFile.name}</span>
-                            <button onClick={handlePaymentProof} disabled={uploadingPayment} className="text-sky-400 text-xs ml-2">
-                              {uploadingPayment ? <div className="w-3 h-3 spinner" /> : 'Submit'}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Verify payment (staff) */}
-                    {isStaff && (
-                      <div className="space-y-2">
-                        {order.paymentProof?.url && (
-                          <a href={order.paymentProof.url} target="_blank" rel="noreferrer"
-                            className="btn-ghost w-full text-sm flex items-center justify-center gap-2">
-                            <Camera size={15} /> View Payment Proof
-                          </a>
-                        )}
-                        <button onClick={handleVerifyPayment} className="btn-primary w-full text-sm flex items-center justify-center gap-2">
-                          <CheckCircle size={15} /> Mark as Paid
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {order.paymentStatus === 'paid' && order.paymentMethod && (
-                  <div className="text-center text-white/30 text-xs">via {order.paymentMethod}</div>
-                )}
+            <div className="card" style={{ marginBottom: 16 }}>
+              <h3 style={{ marginBottom: 14 }}>Payment</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: 6 }}>
+                <span style={{ color: 'var(--text-muted)' }}>Amount Due</span>
+                <span style={{ fontWeight: 700, color: 'var(--text)' }}>₹{order.totalAmount}</span>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: 14 }}>
+                <span style={{ color: 'var(--text-muted)' }}>Status</span>
+                <span style={{ fontWeight: 600, color: order.paymentStatus === 'paid' ? '#2e7d32' : '#f57f17' }}>
+                  {order.paymentStatus === 'paid' ? '✅ Paid' : '⏳ Pending'}
+                </span>
+              </div>
+
+              {order.paymentStatus !== 'paid' && (
+                <>
+                  {/* Simple QR placeholder */}
+                  <div style={{
+                    background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10,
+                    padding: '16px', textAlign: 'center', marginBottom: 10,
+                  }}>
+                    <div style={{
+                      width: 76, height: 76, background: '#fff',
+                      borderRadius: 8, margin: '0 auto 8px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1px solid var(--border)',
+                    }}>
+                      {/* Static QR-like grid */}
+                      <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="0" y="0" width="24" height="24" rx="2" fill="none" stroke="#614668" strokeWidth="3"/>
+                        <rect x="6" y="6" width="12" height="12" rx="1" fill="#614668"/>
+                        <rect x="36" y="0" width="24" height="24" rx="2" fill="none" stroke="#614668" strokeWidth="3"/>
+                        <rect x="42" y="6" width="12" height="12" rx="1" fill="#614668"/>
+                        <rect x="0" y="36" width="24" height="24" rx="2" fill="none" stroke="#614668" strokeWidth="3"/>
+                        <rect x="6" y="42" width="12" height="12" rx="1" fill="#614668"/>
+                        <rect x="36" y="36" width="6" height="6" fill="#614668"/>
+                        <rect x="44" y="36" width="6" height="6" fill="#614668"/>
+                        <rect x="36" y="44" width="6" height="6" fill="#614668"/>
+                        <rect x="44" y="44" width="6" height="6" fill="#614668"/>
+                        <rect x="28" y="0" width="6" height="6" fill="#614668"/>
+                        <rect x="28" y="8" width="6" height="6" fill="#614668"/>
+                        <rect x="0" y="28" width="6" height="6" fill="#614668"/>
+                        <rect x="8" y="28" width="6" height="6" fill="#614668"/>
+                      </svg>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Scan to pay via UPI / Google Pay</p>
+                  </div>
+
+                  {/* Upload proof — customer */}
+                  {!isStaff && (
+                    <div>
+                      <input
+                        ref={paymentInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={e => setPaymentProofFile(e.target.files[0])}
+                      />
+                      <button
+                        className="btn btn-ghost btn-full btn-sm"
+                        onClick={() => paymentInputRef.current?.click()}
+                        style={{ marginBottom: 8 }}
+                      >
+                        <Upload size={14} /> Upload Payment Screenshot
+                      </button>
+                      {paymentProofFile && (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px',
+                        }}>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {paymentProofFile.name}
+                          </span>
+                          <button
+                            onClick={handlePaymentProof}
+                            disabled={uploadingPayment}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600, fontSize: '0.82rem', flexShrink: 0, marginLeft: 8 }}
+                          >
+                            {uploadingPayment ? <span className="spinner" /> : 'Submit'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Verify — staff */}
+                  {isStaff && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {order.paymentProof?.url && (
+                        <a href={order.paymentProof.url} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm btn-full">
+                          <Camera size={14} /> View Payment Proof
+                        </a>
+                      )}
+                      <button className="btn btn-primary btn-full btn-sm" onClick={handleVerifyPayment}>
+                        <CheckCircle size={14} /> Mark as Paid
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {order.paymentStatus === 'paid' && order.paymentMethod && (
+                <p style={{ textAlign: 'center', fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 8 }}>
+                  via {order.paymentMethod}
+                </p>
+              )}
             </div>
 
             {/* Invoice */}
-            <div className="glass-card p-5">
-              <h3 className="font-display font-semibold text-white mb-3">Invoice</h3>
+            <div className="card" style={{ marginBottom: 16 }}>
+              <h3 style={{ marginBottom: 12 }}>Invoice</h3>
               {order.invoiceGenerated ? (
-                <div className="space-y-2">
-                  <p className="text-emerald-400 text-sm flex items-center gap-2"><CheckCircle size={14} /> Invoice generated</p>
+                <div>
+                  <p style={{ fontSize: '0.88rem', color: '#2e7d32', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CheckCircle size={14} /> Invoice generated
+                  </p>
                   {invoice && (
-                    <a href={invoiceAPI.downloadUrl(invoice._id)} target="_blank" rel="noreferrer"
-                      className="btn-ghost w-full text-sm flex items-center justify-center gap-2">
+                    <a href={invoiceAPI.downloadUrl(invoice._id)} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm btn-full">
                       <Download size={14} /> Download PDF
                     </a>
                   )}
                   {!invoice && isStaff && (
-                    <button onClick={handleGenerateInvoice} disabled={generatingInvoice}
-                      className="btn-ghost w-full text-sm flex items-center justify-center gap-2">
-                      {generatingInvoice ? <div className="w-4 h-4 spinner" /> : <><Download size={14} /> Load Invoice</>}
+                    <button className="btn btn-ghost btn-sm btn-full" onClick={handleGenerateInvoice} disabled={generatingInvoice}>
+                      {generatingInvoice ? <span className="spinner" /> : <><Download size={14} /> Load Invoice</>}
                     </button>
                   )}
                 </div>
               ) : (
                 <div>
-                  <p className="text-white/40 text-sm mb-3">No invoice generated yet</p>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 10 }}>No invoice generated yet</p>
                   {isStaff && (
-                    <button onClick={handleGenerateInvoice} disabled={generatingInvoice}
-                      className="btn-primary w-full text-sm flex items-center justify-center gap-2">
-                      {generatingInvoice ? <div className="w-4 h-4 spinner" /> : '🧾 Generate Invoice'}
+                    <button className="btn btn-primary btn-sm btn-full" onClick={handleGenerateInvoice} disabled={generatingInvoice}>
+                      {generatingInvoice ? <span className="spinner" /> : '🧾 Generate Invoice'}
                     </button>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Summary */}
-            <div className="glass-card p-5">
-              <h3 className="font-display font-semibold text-white mb-3">Order Summary</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-white/40">Garments</span><span className="text-white/70">{order.garments.reduce((s, g) => s + g.quantity, 0)} pieces</span></div>
-                <div className="flex justify-between"><span className="text-white/40">Subtotal</span><span className="text-white/70">₹{order.subtotal}</span></div>
-                {order.taxAmount > 0 && <div className="flex justify-between"><span className="text-white/40">Tax</span><span className="text-white/70">₹{order.taxAmount}</span></div>}
-                {order.discountAmount > 0 && <div className="flex justify-between"><span className="text-white/40">Discount</span><span className="text-emerald-400">-₹{order.discountAmount}</span></div>}
-                <div className="flex justify-between pt-2 border-t border-white/5">
-                  <span className="font-semibold text-white">Total</span>
-                  <span className="font-bold text-sky-400">₹{order.totalAmount}</span>
+            {/* Order summary */}
+            <div className="card">
+              <h3 style={{ marginBottom: 12 }}>Order Summary</h3>
+              <div className="order-summary-row">
+                <span>Garments</span>
+                <span>{order.garments.reduce((s, g) => s + g.quantity, 0)} pieces</span>
+              </div>
+              <div className="order-summary-row">
+                <span>Subtotal</span>
+                <span>₹{order.subtotal}</span>
+              </div>
+              {order.taxAmount > 0 && (
+                <div className="order-summary-row">
+                  <span>Tax</span>
+                  <span>₹{order.taxAmount}</span>
                 </div>
+              )}
+              {order.discountAmount > 0 && (
+                <div className="order-summary-row">
+                  <span>Discount</span>
+                  <span style={{ color: '#2e7d32' }}>-₹{order.discountAmount}</span>
+                </div>
+              )}
+              <div className="order-summary-row total">
+                <span>Total</span>
+                <span style={{ color: 'var(--primary)' }}>₹{order.totalAmount}</span>
               </div>
             </div>
           </div>

@@ -14,7 +14,7 @@ import {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-navy-950">
+    <div style={{ backgroundColor: 'var(--bg)' }}>
       <Navbar />
       <HeroSection />
       <ServicesSection />

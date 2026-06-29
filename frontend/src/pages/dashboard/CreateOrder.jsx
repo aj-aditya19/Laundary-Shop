@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, Trash2, Search, ArrowLeft, UserPlus } from 'lucide-react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { orderAPI, customerAPI } from '../../services/api';
@@ -8,14 +7,24 @@ import { garmentTypes } from '../../data';
 import toast from 'react-hot-toast';
 
 const SERVICE_TYPES = [
-  { value: 'wash', label: 'Wash Only' },
-  { value: 'dry_clean', label: 'Dry Clean' },
-  { value: 'iron', label: 'Iron Only' },
-  { value: 'wash_iron', label: 'Wash + Iron' },
+  { value: 'wash',           label: 'Wash Only' },
+  { value: 'dry_clean',      label: 'Dry Clean' },
+  { value: 'iron',           label: 'Iron Only' },
+  { value: 'wash_iron',      label: 'Wash + Iron' },
   { value: 'dry_clean_iron', label: 'Dry Clean + Iron' },
 ];
 
-const SERVICE_MULTIPLIERS = { wash: 1, dry_clean: 1.5, iron: 0.5, wash_iron: 1.3, dry_clean_iron: 1.8 };
+const SERVICE_MULTIPLIERS = {
+  wash: 1, dry_clean: 1.5, iron: 0.5, wash_iron: 1.3, dry_clean_iron: 1.8,
+};
+
+const CONDITIONS = [
+  { f: 'hasStain',       l: 'Stain' },
+  { f: 'hasTear',        l: 'Tear' },
+  { f: 'hasColorFade',   l: 'Color Fade' },
+  { f: 'looseStitching', l: 'Loose Stitching' },
+  { f: 'missingButton',  l: 'Missing Button' },
+];
 
 export default function CreateOrder() {
   const navigate = useNavigate();
@@ -32,7 +41,7 @@ export default function CreateOrder() {
 
   // Garments
   const [garments, setGarments] = useState([
-    { type: 'shirt', category: 'men', quantity: 1, serviceType: 'dry_clean', unitPrice: 40, specialInstructions: '', condition: {} }
+    { type: 'shirt', category: 'men', quantity: 1, serviceType: 'dry_clean', unitPrice: 40, specialInstructions: '', condition: {} },
   ]);
 
   // Order settings
@@ -40,6 +49,7 @@ export default function CreateOrder() {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Search timer ref replacement
   const searchCustomers = useCallback(async (q) => {
     if (!q.trim()) { setCustomers([]); return; }
     setSearchLoading(true);
@@ -52,8 +62,9 @@ export default function CreateOrder() {
   }, []);
 
   const handleSearchChange = (e) => {
-    setCustomerSearch(e.target.value);
-    const t = setTimeout(() => searchCustomers(e.target.value), 400);
+    const val = e.target.value;
+    setCustomerSearch(val);
+    const t = setTimeout(() => searchCustomers(val), 400);
     return () => clearTimeout(t);
   };
 
@@ -77,7 +88,7 @@ export default function CreateOrder() {
   const addGarment = () => {
     setGarments([...garments, {
       type: 'shirt', category: 'men', quantity: 1,
-      serviceType: 'dry_clean', unitPrice: 40, specialInstructions: '', condition: {}
+      serviceType: 'dry_clean', unitPrice: 40, specialInstructions: '', condition: {},
     }]);
   };
 
@@ -90,11 +101,10 @@ export default function CreateOrder() {
     const updated = [...garments];
     updated[i] = { ...updated[i], [field]: value };
 
-    // Recalculate price when type or service changes
     if (field === 'type') {
       const found = garmentTypes.find(g => g.value === value);
       if (found) {
-        updated[i].category = found.category;
+        updated[i].category  = found.category;
         updated[i].unitPrice = Math.round(found.basePrice * (SERVICE_MULTIPLIERS[updated[i].serviceType] || 1));
       }
     }
@@ -118,13 +128,13 @@ export default function CreateOrder() {
       const { data } = await orderAPI.createOrder({
         customerId: selectedCustomer._id,
         garments: garments.map(g => ({
-          type: garmentTypes.find(gt => gt.value === g.type)?.label || g.type,
-          category: g.category,
-          quantity: g.quantity,
-          unitPrice: g.unitPrice,
-          serviceType: g.serviceType,
+          type:               garmentTypes.find(gt => gt.value === g.type)?.label || g.type,
+          category:           g.category,
+          quantity:           g.quantity,
+          unitPrice:          g.unitPrice,
+          serviceType:        g.serviceType,
           specialInstructions: g.specialInstructions,
-          condition: g.condition,
+          condition:          g.condition,
         })),
         serviceType,
         notes,
@@ -140,314 +150,485 @@ export default function CreateOrder() {
 
   return (
     <DashboardLayout title="Create New Order">
-      <div className="max-w-4xl mx-auto">
+      <div style={{ maxWidth: 860, margin: '0 auto' }}>
+
         {/* Back */}
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/40 hover:text-white mb-5 text-sm transition-colors">
-          <ArrowLeft size={16} /> Back
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: 20,
+          }}
+        >
+          <ArrowLeft size={15} /> Back
         </button>
 
-        {/* Steps indicator */}
-        <div className="flex items-center gap-3 mb-8">
+        {/* Step indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
           {[
             { n: 1, label: 'Customer' },
             { n: 2, label: 'Garments' },
             { n: 3, label: 'Review' },
           ].map(({ n, label }) => (
-            <div key={n} className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                step >= n ? 'bg-sky-500 text-white' : 'bg-white/10 text-white/30'
-              }`}>{n}</div>
-              <span className={`text-sm font-medium ${step >= n ? 'text-white/80' : 'text-white/30'}`}>{label}</span>
-              {n < 3 && <div className={`h-px w-8 ${step > n ? 'bg-sky-500' : 'bg-white/10'}`} />}
+            <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.85rem', fontWeight: 700,
+                backgroundColor: step >= n ? 'var(--primary)' : 'var(--bg)',
+                color: step >= n ? '#fff' : 'var(--text-muted)',
+                border: `2px solid ${step >= n ? 'var(--primary)' : 'var(--border)'}`,
+              }}>
+                {n}
+              </div>
+              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: step >= n ? 'var(--text)' : 'var(--text-muted)' }}>
+                {label}
+              </span>
+              {n < 3 && (
+                <div style={{ width: 32, height: 2, backgroundColor: step > n ? 'var(--primary)' : 'var(--border)', borderRadius: 1 }} />
+              )}
             </div>
           ))}
         </div>
 
-        <AnimatePresence mode="wait">
-          {/* Step 1: Customer Selection */}
-          {step === 1 && (
-            <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-              <div className="glass-card p-6">
-                <h2 className="font-display font-semibold text-white mb-4">Select Customer</h2>
+        {/* ---- STEP 1: Customer ---- */}
+        {step === 1 && (
+          <div>
+            <div className="card" style={{ marginBottom: 16 }}>
+              <h2 style={{ marginBottom: 16 }}>Select Customer</h2>
 
-                {selectedCustomer ? (
-                  <div className="flex items-center justify-between p-4 bg-sky-500/10 border border-sky-500/20 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-sky-500/20 flex items-center justify-center font-bold text-sky-400">
-                        {selectedCustomer.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-medium text-white">{selectedCustomer.name}</div>
-                        <div className="text-white/40 text-sm">{selectedCustomer.phone} • {selectedCustomer.email}</div>
+              {selectedCustomer ? (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '14px 16px', borderRadius: 10,
+                  background: '#f5eef6', border: '1px solid #e0d4e3',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: 'var(--primary)', color: '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: 700, fontSize: '1rem',
+                    }}>
+                      {selectedCustomer.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: 'var(--text)' }}>{selectedCustomer.name}</div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        {selectedCustomer.phone} • {selectedCustomer.email}
                       </div>
                     </div>
-                    <button onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }} className="text-white/40 hover:text-white text-sm transition-colors">Change</button>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
-                      <input
-                        value={customerSearch}
-                        onChange={handleSearchChange}
-                        placeholder="Search by name, phone, or email..."
-                        className="input-field pl-11"
-                      />
-                      {searchLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 spinner" />}
-                    </div>
-
-                    {customers.length > 0 && (
-                      <div className="border border-white/10 rounded-xl overflow-hidden">
-                        {customers.map((c, i) => (
-                          <button key={c._id} onClick={() => { setSelectedCustomer(c); setCustomers([]); }}
-                            className={`w-full flex items-center gap-3 p-3 text-left hover:bg-white/5 transition-colors ${i > 0 ? 'border-t border-white/5' : ''}`}>
-                            <div className="w-8 h-8 rounded-full bg-sky-500/15 flex items-center justify-center font-bold text-sky-400 text-sm">
-                              {c.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <div className="text-white text-sm font-medium">{c.name}</div>
-                              <div className="text-white/40 text-xs">{c.phone} • {c.email}</div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
+                  <button
+                    onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600 }}
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  {/* Search input */}
+                  <div className="field-icon-wrap" style={{ marginBottom: 10 }}>
+                    <span className="icon"><Search size={16} /></span>
+                    <input
+                      className="input-field pl-11"
+                      value={customerSearch}
+                      onChange={handleSearchChange}
+                      placeholder="Search by name, phone, or email..."
+                    />
+                    {searchLoading && (
+                      <span className="icon-right"><span className="spinner" /></span>
                     )}
-
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-px bg-white/10" />
-                      <span className="text-white/30 text-xs">or</span>
-                      <div className="flex-1 h-px bg-white/10" />
-                    </div>
-
-                    <button onClick={() => setShowNewCustomer(!showNewCustomer)}
-                      className="btn-ghost w-full flex items-center justify-center gap-2 text-sm">
-                      <UserPlus size={15} /> Create New Customer
-                    </button>
-
-                    <AnimatePresence>
-                      {showNewCustomer && (
-                        <motion.form initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                          onSubmit={handleCreateCustomer} className="glass rounded-xl p-4 space-y-3">
-                          <input className="input-field text-sm" placeholder="Full Name*" required value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
-                          <input className="input-field text-sm" placeholder="Phone*" required value={newCustomer.phone} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
-                          <input className="input-field text-sm" type="email" placeholder="Email (optional)" value={newCustomer.email} onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })} />
-                          <button type="submit" disabled={creatingCustomer} className="btn-primary w-full text-sm h-10 flex items-center justify-center gap-2">
-                            {creatingCustomer ? <div className="w-4 h-4 spinner" /> : 'Create & Select'}
-                          </button>
-                        </motion.form>
-                      )}
-                    </AnimatePresence>
                   </div>
-                )}
-              </div>
 
-              <div className="glass-card p-5">
-                <h3 className="font-semibold text-white mb-3 text-sm">Order Settings</h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-white/50 text-xs block mb-2">Service Type</label>
-                    <div className="flex gap-2">
-                      {[{ v: 'normal', l: '📦 Normal (3-5 days)' }, { v: 'express', l: '⚡ Express (1-2 days)' }].map(({ v, l }) => (
-                        <button key={v} onClick={() => setServiceType(v)}
-                          className={`flex-1 text-xs px-3 py-2 rounded-lg border transition-all ${serviceType === v ? 'bg-sky-500/20 border-sky-500/40 text-sky-300' : 'border-white/10 text-white/40 hover:border-white/20'}`}>
-                          {l}
+                  {/* Dropdown results */}
+                  {customers.length > 0 && (
+                    <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', marginBottom: 12 }}>
+                      {customers.map((c, i) => (
+                        <button
+                          key={c._id}
+                          onClick={() => { setSelectedCustomer(c); setCustomers([]); }}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none',
+                            cursor: 'pointer', borderTop: i > 0 ? '1px solid var(--border)' : 'none',
+                          }}
+                          onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                        >
+                          <div style={{
+                            width: 32, height: 32, borderRadius: '50%', background: '#f5eef6',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontWeight: 700, color: 'var(--primary)', fontSize: '0.88rem',
+                          }}>
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.9rem' }}>{c.name}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{c.phone} • {c.email}</div>
+                          </div>
                         </button>
                       ))}
                     </div>
-                  </div>
-                  <div>
-                    <label className="text-white/50 text-xs block mb-2">Order Notes</label>
-                    <input className="input-field text-sm" placeholder="Any special instructions..." value={notes} onChange={e => setNotes(e.target.value)} />
-                  </div>
-                </div>
-              </div>
+                  )}
 
-              <div className="flex justify-end">
-                <button onClick={() => { if (!selectedCustomer) return toast.error('Please select a customer'); setStep(2); }}
-                  className="btn-primary">
-                  Next: Add Garments →
-                </button>
-              </div>
-            </motion.div>
-          )}
+                  {/* Divider */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '12px 0' }}>
+                    <div style={{ flex: 1, height: 1, backgroundColor: 'var(--border)' }} />
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>or</span>
+                    <div style={{ flex: 1, height: 1, backgroundColor: 'var(--border)' }} />
+                  </div>
 
-          {/* Step 2: Garments */}
-          {step === 2 && (
-            <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-              <div className="glass-card p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="font-display font-semibold text-white">Add Garments</h2>
-                  <button onClick={addGarment} className="flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm transition-colors">
-                    <Plus size={16} /> Add Item
+                  <button
+                    className="btn btn-ghost btn-full"
+                    onClick={() => setShowNewCustomer(!showNewCustomer)}
+                  >
+                    <UserPlus size={15} /> Create New Customer
                   </button>
+
+                  {/* New customer form */}
+                  {showNewCustomer && (
+                    <form
+                      onSubmit={handleCreateCustomer}
+                      style={{
+                        marginTop: 12, padding: 16,
+                        background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10,
+                        display: 'flex', flexDirection: 'column', gap: 10,
+                      }}
+                    >
+                      <input
+                        className="input-field"
+                        placeholder="Full Name*"
+                        required
+                        value={newCustomer.name}
+                        onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                      />
+                      <input
+                        className="input-field"
+                        placeholder="Phone*"
+                        required
+                        value={newCustomer.phone}
+                        onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                      />
+                      <input
+                        className="input-field"
+                        type="email"
+                        placeholder="Email (optional)"
+                        value={newCustomer.email}
+                        onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                      />
+                      <button
+                        type="submit"
+                        className="btn btn-primary btn-full"
+                        disabled={creatingCustomer}
+                        style={{ height: 42 }}
+                      >
+                        {creatingCustomer ? <span className="spinner" /> : 'Create & Select'}
+                      </button>
+                    </form>
+                  )}
                 </div>
+              )}
+            </div>
 
-                <div className="space-y-4">
-                  {garments.map((g, i) => {
-                    const typeInfo = garmentTypes.find(gt => gt.value === g.type);
-                    return (
-                      <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                        className="border border-white/10 rounded-xl p-4 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-white/50 text-xs uppercase tracking-wider">Item {i + 1}</span>
-                          <button onClick={() => removeGarment(i)} className="text-white/25 hover:text-red-400 transition-colors p-1">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-
-                        <div className="grid sm:grid-cols-3 gap-3">
-                          <div>
-                            <label className="text-white/40 text-xs block mb-1.5">Garment Type</label>
-                            <select className="input-field text-sm" value={g.type} onChange={e => updateGarment(i, 'type', e.target.value)}>
-                              {['men', 'women', 'household'].map(cat => (
-                                <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
-                                  {garmentTypes.filter(gt => gt.category === cat).map(gt => (
-                                    <option key={gt.value} value={gt.value}>{gt.label}</option>
-                                  ))}
-                                </optgroup>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="text-white/40 text-xs block mb-1.5">Service</label>
-                            <select className="input-field text-sm" value={g.serviceType} onChange={e => updateGarment(i, 'serviceType', e.target.value)}>
-                              {SERVICE_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="text-white/40 text-xs block mb-1.5">Quantity</label>
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => g.quantity > 1 && updateGarment(i, 'quantity', g.quantity - 1)}
-                                className="w-9 h-9 rounded-lg glass flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all">
-                                <Minus size={14} />
-                              </button>
-                              <span className="flex-1 text-center font-bold text-white">{g.quantity}</span>
-                              <button onClick={() => updateGarment(i, 'quantity', g.quantity + 1)}
-                                className="w-9 h-9 rounded-lg glass flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all">
-                                <Plus size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-white/40 text-xs block mb-1.5">Unit Price (₹)</label>
-                            <input type="number" className="input-field text-sm" value={g.unitPrice}
-                              onChange={e => updateGarment(i, 'unitPrice', Number(e.target.value))} min="0" />
-                          </div>
-                          <div>
-                            <label className="text-white/40 text-xs block mb-1.5">Special Instructions</label>
-                            <input className="input-field text-sm" placeholder="e.g. Handle with care" value={g.specialInstructions}
-                              onChange={e => updateGarment(i, 'specialInstructions', e.target.value)} />
-                          </div>
-                        </div>
-
-                        {/* Condition checkboxes */}
-                        <div>
-                          <label className="text-white/40 text-xs block mb-1.5">Pre-existing Condition</label>
-                          <div className="flex flex-wrap gap-2">
-                            {[
-                              { f: 'hasStain', l: 'Stain' },
-                              { f: 'hasTear', l: 'Tear' },
-                              { f: 'hasColorFade', l: 'Color Fade' },
-                              { f: 'looseStitching', l: 'Loose Stitching' },
-                              { f: 'missingButton', l: 'Missing Button' },
-                            ].map(({ f, l }) => (
-                              <label key={f} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs cursor-pointer transition-all border ${
-                                g.condition?.[f] ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'border-white/10 text-white/40 hover:border-white/20'
-                              }`}>
-                                <input type="checkbox" className="sr-only" checked={g.condition?.[f] || false}
-                                  onChange={e => updateGarment(i, 'condition', { ...g.condition, [f]: e.target.checked })} />
-                                {g.condition?.[f] ? '✓' : '○'} {l}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex justify-between pt-2 border-t border-white/5">
-                          <span className="text-white/40 text-sm">Item Total</span>
-                          <span className="text-sky-400 font-bold">₹{g.unitPrice * g.quantity}</span>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="glass-card p-4 flex justify-between items-center">
-                <div className="text-white/50 text-sm">{garments.reduce((s, g) => s + g.quantity, 0)} pieces</div>
-                <div className="text-right">
-                  <div className="text-white/40 text-xs">Order Total</div>
-                  <div className="font-display font-bold text-white text-xl">₹{subtotal}</div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 justify-between">
-                <button onClick={() => setStep(1)} className="btn-ghost">← Back</button>
-                <button onClick={() => setStep(3)} className="btn-primary">Review Order →</button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Step 3: Review */}
-          {step === 3 && (
-            <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-              <div className="glass-card p-6">
-                <h2 className="font-display font-semibold text-white mb-5">Review Order</h2>
-
-                <div className="grid sm:grid-cols-2 gap-4 mb-5 p-4 bg-white/3 rounded-xl">
-                  <div>
-                    <div className="text-white/30 text-xs uppercase tracking-wider mb-1">Customer</div>
-                    <div className="text-white font-medium">{selectedCustomer?.name}</div>
-                    <div className="text-white/50 text-sm">{selectedCustomer?.phone}</div>
-                  </div>
-                  <div>
-                    <div className="text-white/30 text-xs uppercase tracking-wider mb-1">Service</div>
-                    <div className="text-white font-medium capitalize">{serviceType === 'express' ? '⚡ Express' : '📦 Normal'}</div>
-                    <div className="text-white/50 text-sm">{serviceType === 'express' ? '1-2 days' : '3-5 days'}</div>
+            {/* Order settings */}
+            <div className="card" style={{ marginBottom: 16 }}>
+              <h3 style={{ marginBottom: 14 }}>Order Settings</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>
+                    Service Type
+                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[
+                      { v: 'normal',  l: '📦 Normal (3-5 days)' },
+                      { v: 'express', l: '⚡ Express (1-2 days)' },
+                    ].map(({ v, l }) => (
+                      <button
+                        key={v}
+                        onClick={() => setServiceType(v)}
+                        style={{
+                          flex: 1, fontSize: '0.8rem', padding: '8px 6px', borderRadius: 8,
+                          border: `1.5px solid ${serviceType === v ? 'var(--primary)' : 'var(--border)'}`,
+                          background: serviceType === v ? '#f5eef6' : 'var(--surface)',
+                          color: serviceType === v ? 'var(--primary)' : 'var(--text-muted)',
+                          cursor: 'pointer', fontWeight: serviceType === v ? 600 : 400,
+                        }}
+                      >
+                        {l}
+                      </button>
+                    ))}
                   </div>
                 </div>
-
-                <div className="space-y-2 mb-5">
-                  <div className="text-white/30 text-xs uppercase tracking-wider mb-2">Garments</div>
-                  {garments.map((g, i) => {
-                    const typeInfo = garmentTypes.find(gt => gt.value === g.type);
-                    const serviceInfo = SERVICE_TYPES.find(s => s.value === g.serviceType);
-                    return (
-                      <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 text-sm">
-                        <div>
-                          <span className="text-white/80">{typeInfo?.label || g.type}</span>
-                          <span className="text-white/40 ml-2">× {g.quantity}</span>
-                          <span className="text-white/30 ml-2">({serviceInfo?.label})</span>
-                          {Object.values(g.condition || {}).some(Boolean) && (
-                            <span className="ml-2 text-xs text-amber-400">⚠ Condition noted</span>
-                          )}
-                        </div>
-                        <span className="text-sky-400 font-medium">₹{g.unitPrice * g.quantity}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="p-4 bg-sky-500/5 border border-sky-500/20 rounded-xl flex justify-between items-center">
-                  <div>
-                    <div className="text-white/40 text-sm">Total Amount</div>
-                    {notes && <div className="text-white/30 text-xs mt-1">Note: {notes}</div>}
-                  </div>
-                  <div className="font-display font-bold text-sky-400 text-3xl">₹{subtotal}</div>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 8 }}>
+                    Order Notes
+                  </label>
+                  <input
+                    className="input-field"
+                    placeholder="Any special instructions..."
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                  />
                 </div>
               </div>
+            </div>
 
-              <div className="flex gap-3 justify-between">
-                <button onClick={() => setStep(2)} className="btn-ghost">← Edit Garments</button>
-                <button onClick={handleSubmit} disabled={submitting} className="btn-primary flex items-center gap-2 px-8">
-                  {submitting ? <div className="w-5 h-5 spinner" /> : '✅ Confirm & Create Order'}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => { if (!selectedCustomer) return toast.error('Please select a customer'); setStep(2); }}
+              >
+                Next: Add Garments →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ---- STEP 2: Garments ---- */}
+        {step === 2 && (
+          <div>
+            <div className="card" style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h2>Add Garments</h2>
+                <button
+                  onClick={addGarment}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600, fontSize: '0.88rem' }}
+                >
+                  <Plus size={16} /> Add Item
                 </button>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              {garments.map((g, i) => (
+                <div
+                  key={i}
+                  style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 18, marginBottom: 12 }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                      Item {i + 1}
+                    </span>
+                    <button
+                      onClick={() => removeGarment(i)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, borderRadius: 6 }}
+                      onMouseOver={e => { e.currentTarget.style.color = '#c62828'; e.currentTarget.style.background = '#fdecea'; }}
+                      onMouseOut={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'none'; }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>Garment Type</label>
+                      <select className="select-field" value={g.type} onChange={e => updateGarment(i, 'type', e.target.value)}>
+                        {['men', 'women', 'household'].map(cat => (
+                          <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
+                            {garmentTypes.filter(gt => gt.category === cat).map(gt => (
+                              <option key={gt.value} value={gt.value}>{gt.label}</option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>Service</label>
+                      <select className="select-field" value={g.serviceType} onChange={e => updateGarment(i, 'serviceType', e.target.value)}>
+                        {SERVICE_TYPES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>Quantity</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button
+                          onClick={() => g.quantity > 1 && updateGarment(i, 'quantity', g.quantity - 1)}
+                          style={{
+                            width: 34, height: 34, border: '1px solid var(--border)', borderRadius: 8,
+                            background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >
+                          <Minus size={14} style={{ color: 'var(--text-muted)' }} />
+                        </button>
+                        <span style={{ flex: 1, textAlign: 'center', fontWeight: 700, color: 'var(--text)' }}>{g.quantity}</span>
+                        <button
+                          onClick={() => updateGarment(i, 'quantity', g.quantity + 1)}
+                          style={{
+                            width: 34, height: 34, border: '1px solid var(--border)', borderRadius: 8,
+                            background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >
+                          <Plus size={14} style={{ color: 'var(--text-muted)' }} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>Unit Price (₹)</label>
+                      <input
+                        type="number"
+                        className="input-field"
+                        value={g.unitPrice}
+                        onChange={e => updateGarment(i, 'unitPrice', Number(e.target.value))}
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: 5 }}>Special Instructions</label>
+                      <input
+                        className="input-field"
+                        placeholder="e.g. Handle with care"
+                        value={g.specialInstructions}
+                        onChange={e => updateGarment(i, 'specialInstructions', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Condition checkboxes */}
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: 7 }}>Pre-existing Condition</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {CONDITIONS.map(({ f, l }) => (
+                        <label
+                          key={f}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '5px 11px', borderRadius: 8, fontSize: '0.8rem', cursor: 'pointer',
+                            border: `1px solid ${g.condition?.[f] ? '#f5c6c6' : 'var(--border)'}`,
+                            backgroundColor: g.condition?.[f] ? '#fdecea' : 'var(--surface)',
+                            color: g.condition?.[f] ? '#c62828' : 'var(--text-muted)',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            style={{ display: 'none' }}
+                            checked={g.condition?.[f] || false}
+                            onChange={e => updateGarment(i, 'condition', { ...g.condition, [f]: e.target.checked })}
+                          />
+                          {g.condition?.[f] ? '✓' : '○'} {l}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Item Total</span>
+                    <span style={{ fontWeight: 700, color: 'var(--primary)' }}>₹{g.unitPrice * g.quantity}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Totals bar */}
+            <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                {garments.reduce((s, g) => s + g.quantity, 0)} pieces
+              </span>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Order Total</div>
+                <div style={{ fontWeight: 800, color: 'var(--text)', fontSize: '1.4rem' }}>₹{subtotal}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <button className="btn btn-ghost" onClick={() => setStep(1)}>← Back</button>
+              <button className="btn btn-primary" onClick={() => setStep(3)}>Review Order →</button>
+            </div>
+          </div>
+        )}
+
+        {/* ---- STEP 3: Review ---- */}
+        {step === 3 && (
+          <div>
+            <div className="card" style={{ marginBottom: 16 }}>
+              <h2 style={{ marginBottom: 20 }}>Review Order</h2>
+
+              {/* Customer + service */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16,
+                marginBottom: 20, padding: 16, background: 'var(--bg)', borderRadius: 10,
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 4 }}>
+                    Customer
+                  </div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)' }}>{selectedCustomer?.name}</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{selectedCustomer?.phone}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 4 }}>
+                    Service
+                  </div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)' }}>
+                    {serviceType === 'express' ? '⚡ Express' : '📦 Normal'}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    {serviceType === 'express' ? '1-2 days' : '3-5 days'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Garments list */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 10 }}>
+                  Garments
+                </div>
+                {garments.map((g, i) => {
+                  const typeInfo    = garmentTypes.find(gt => gt.value === g.type);
+                  const serviceInfo = SERVICE_TYPES.find(s => s.value === g.serviceType);
+                  const hasCondition = Object.values(g.condition || {}).some(Boolean);
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 0', borderBottom: '1px solid var(--border)',
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      <div>
+                        <span style={{ color: 'var(--text)', fontWeight: 500 }}>{typeInfo?.label || g.type}</span>
+                        <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>× {g.quantity}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginLeft: 6 }}>({serviceInfo?.label})</span>
+                        {hasCondition && (
+                          <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#f57f17' }}>⚠ Condition noted</span>
+                        )}
+                      </div>
+                      <span style={{ fontWeight: 600, color: 'var(--primary)' }}>₹{g.unitPrice * g.quantity}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Total box */}
+              <div style={{
+                padding: '16px 20px', background: '#f5eef6', border: '1px solid #e0d4e3',
+                borderRadius: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Amount</div>
+                  {notes && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Note: {notes}</div>}
+                </div>
+                <div style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '2rem', lineHeight: 1 }}>₹{subtotal}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <button className="btn btn-ghost" onClick={() => setStep(2)}>← Edit Garments</button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSubmit}
+                disabled={submitting}
+                style={{ padding: '12px 32px' }}
+              >
+                {submitting ? <span className="spinner" /> : '✅ Confirm & Create Order'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

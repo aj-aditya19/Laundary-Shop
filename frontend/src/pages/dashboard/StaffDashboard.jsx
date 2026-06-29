@@ -1,113 +1,157 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Plus, Search, RefreshCw } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { StatCard, OrderRow, LoadingSpinner, EmptyState, StatusBadge } from '../../components/dashboard/DashboardWidgets';
+import { StatCard, OrderRow, LoadingSpinner, EmptyState } from '../../components/dashboard/DashboardWidgets';
 import { orderAPI, customerAPI } from '../../services/api';
 import { orderStatuses } from '../../data';
-import toast from 'react-hot-toast';
 
 export default function StaffDashboard() {
   const [searchParams] = useSearchParams();
   const tab = searchParams.get('tab') || 'home';
 
+  const titleMap = {
+    home:      'Staff Dashboard',
+    orders:    'Orders',
+    customers: 'Customers',
+  };
+
   return (
-    <DashboardLayout title={tab === 'home' ? 'Staff Dashboard' : tab.charAt(0).toUpperCase() + tab.slice(1)}>
-      {tab === 'home' && <StaffHome />}
-      {tab === 'orders' && <StaffOrders />}
+    <DashboardLayout title={titleMap[tab] || 'Dashboard'}>
+      {tab === 'home'      && <StaffHome />}
+      {tab === 'orders'    && <StaffOrders />}
       {tab === 'customers' && <StaffCustomers />}
     </DashboardLayout>
   );
 }
 
+/* ---- Home Tab ---- */
 function StaffHome() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    orderAPI.getOrders({ limit: 20 }).then(({ data }) => setOrders(data.orders)).catch(() => {}).finally(() => setLoading(false));
+    orderAPI.getOrders({ limit: 20 })
+      .then(({ data }) => setOrders(data.orders))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const readyOrders = orders.filter(o => o.status === 'ready');
-  const activeOrders = orders.filter(o => !['delivered'].includes(o.status));
-  const todayOrders = orders.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString());
+  const readyOrders  = orders.filter(o => o.status === 'ready');
+  const activeOrders = orders.filter(o => o.status !== 'delivered');
+  const todayOrders  = orders.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString());
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Active Orders" value={activeOrders.length} icon="📦" color="#38BDF8" index={0} />
-        <StatCard label="Ready for Pickup" value={readyOrders.length} icon="🎉" color="#10B981" index={1} />
-        <StatCard label="Today's Orders" value={todayOrders.length} icon="📅" color="#F59E0B" index={2} />
-        <StatCard label="Total Loaded" value={orders.length} icon="📊" color="#8B5CF6" index={3} />
+    <div>
+      {/* Stat cards */}
+      <div className="stat-cards-row">
+        <StatCard label="Active Orders"    value={activeOrders.length} icon="📦" color="#614668" index={0} />
+        <StatCard label="Ready for Pickup" value={readyOrders.length}  icon="🎉" color="#4caf50" index={1} />
+        <StatCard label="Today's Orders"   value={todayOrders.length}  icon="📅" color="#f59e0b" index={2} />
+        <StatCard label="Total Loaded"     value={orders.length}       icon="📊" color="#5D748E" index={3} />
       </div>
 
-      {/* Quick actions */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <button onClick={() => navigate('/dashboard/orders/create')}
-          className="glass-card p-5 flex items-center gap-4 hover:border-sky-500/30 hover:bg-sky-500/5 transition-all duration-300 group text-left">
-          <div className="w-12 h-12 rounded-xl bg-sky-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">➕</div>
+      {/* Quick action cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+        <button
+          className="card"
+          style={{ display: 'flex', alignItems: 'center', gap: 16, textAlign: 'left', cursor: 'pointer', border: '1px solid var(--border)' }}
+          onClick={() => navigate('/dashboard/orders/create')}
+        >
+          <div style={{
+            width: 48, height: 48, borderRadius: 12,
+            background: '#f5eef6', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0,
+          }}>
+            ➕
+          </div>
           <div>
-            <div className="font-semibold text-white">New Order</div>
-            <div className="text-white/40 text-sm">Create order for a customer</div>
+            <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>New Order</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Create order for a customer</div>
           </div>
         </button>
-        <button onClick={() => navigate('/track')}
-          className="glass-card p-5 flex items-center gap-4 hover:border-sky-500/30 hover:bg-sky-500/5 transition-all duration-300 group text-left">
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🔍</div>
+
+        <button
+          className="card"
+          style={{ display: 'flex', alignItems: 'center', gap: 16, textAlign: 'left', cursor: 'pointer', border: '1px solid var(--border)' }}
+          onClick={() => navigate('/track')}
+        >
+          <div style={{
+            width: 48, height: 48, borderRadius: 12,
+            background: '#eaf0f5', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0,
+          }}>
+            🔍
+          </div>
           <div>
-            <div className="font-semibold text-white">Track Order</div>
-            <div className="text-white/40 text-sm">Look up order by Tag ID</div>
+            <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Track Order</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Look up order by Tag ID</div>
           </div>
         </button>
       </div>
 
-      {/* Ready for pickup */}
+      {/* Ready for pickup banner */}
       {readyOrders.length > 0 && (
-        <div className="glass-card p-6 border-emerald-500/20 bg-emerald-500/3">
-          <h2 className="font-display font-semibold text-emerald-400 mb-4 flex items-center gap-2">
+        <div
+          className="card"
+          style={{ marginBottom: 20, borderColor: '#c3e6cb', backgroundColor: '#f0faf2' }}
+        >
+          <h3 style={{ color: '#2e7d32', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>🎉</span> Ready for Pickup ({readyOrders.length})
-          </h2>
-          <div className="space-y-2">
-            {readyOrders.map(order => (
-              <div key={order._id} onClick={() => navigate(`/dashboard/orders/${order._id}`)}
-                className="flex items-center justify-between p-3 bg-emerald-500/5 rounded-xl cursor-pointer hover:bg-emerald-500/10 transition-colors">
-                <div>
-                  <span className="font-mono text-sky-400 font-semibold text-sm">{order.tagId}</span>
-                  <span className="text-white/50 text-sm ml-3">{order.customerName}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-white/60 text-sm">₹{order.totalAmount}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${order.paymentStatus === 'paid' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                    {order.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
-                  </span>
-                </div>
+          </h3>
+          {readyOrders.map(order => (
+            <div
+              key={order._id}
+              onClick={() => navigate(`/dashboard/orders/${order._id}`)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 14px', borderRadius: 10, cursor: 'pointer', marginBottom: 6,
+                backgroundColor: '#e8f5e9', border: '1px solid #c3e6cb',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontFamily: 'Courier New, monospace', fontWeight: 700, color: 'var(--primary)', fontSize: '0.9rem' }}>
+                  {order.tagId}
+                </span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{order.customerName}</span>
               </div>
-            ))}
-          </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>₹{order.totalAmount}</span>
+                <span className={`payment-badge ${order.paymentStatus === 'paid' ? 'paid' : 'pending'}`}>
+                  {order.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Recent orders table */}
-      <div className="glass-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center">
-          <h2 className="font-display font-semibold text-white">All Orders</h2>
-          <button onClick={() => navigate('/dashboard?tab=orders')} className="text-sky-400 hover:text-sky-300 text-sm">View all →</button>
+      <div className="data-table-wrap">
+        <div className="data-table-header">
+          <h2>All Orders</h2>
+          <button onClick={() => navigate('/dashboard?tab=orders')}>View all →</button>
         </div>
-        {loading ? <LoadingSpinner /> : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        {loading ? (
+          <LoadingSpinner />
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table">
               <thead>
-                <tr className="border-b border-white/5">
+                <tr>
                   {['Tag ID', 'Customer', 'Status', 'Amount', 'Date', 'Payment'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-white/30 text-xs font-medium uppercase tracking-wider">{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {orders.slice(0, 10).map(order => (
-                  <OrderRow key={order._id} order={order} onClick={() => navigate(`/dashboard/orders/${order._id}`)} />
+                  <OrderRow
+                    key={order._id}
+                    order={order}
+                    onClick={() => navigate(`/dashboard/orders/${order._id}`)}
+                  />
                 ))}
               </tbody>
             </table>
@@ -118,6 +162,7 @@ function StaffHome() {
   );
 }
 
+/* ---- Orders Tab ---- */
 function StaffOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +173,11 @@ function StaffOrders() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await orderAPI.getOrders({ search: search || undefined, status: statusFilter || undefined, limit: 100 });
+      const { data } = await orderAPI.getOrders({
+        search: search || undefined,
+        status: statusFilter || undefined,
+        limit: 100,
+      });
       setOrders(data.orders);
     } finally {
       setLoading(false);
@@ -141,37 +190,59 @@ function StaffOrders() {
   }, [load]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
-          <input className="input-field pl-10" placeholder="Search by tag ID, name, phone..." value={search} onChange={e => setSearch(e.target.value)} />
+    <div>
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div className="field-icon-wrap" style={{ flex: 1, minWidth: 200 }}>
+          <span className="icon"><Search size={16} /></span>
+          <input
+            className="input-field pl-11"
+            placeholder="Search by tag ID, name, phone..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
-        <select className="input-field sm:w-48" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+        <select
+          className="select-field"
+          style={{ width: 180 }}
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+        >
           <option value="">All Status</option>
-          {orderStatuses.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          {orderStatuses.map(s => (
+            <option key={s.key} value={s.key}>{s.label}</option>
+          ))}
         </select>
-        <button onClick={() => navigate('/dashboard/orders/create')} className="btn-primary flex items-center gap-2 whitespace-nowrap">
+        <button
+          className="btn btn-primary"
+          onClick={() => navigate('/dashboard/orders/create')}
+        >
           <Plus size={16} /> New Order
         </button>
       </div>
 
-      <div className="glass-card overflow-hidden">
-        {loading ? <LoadingSpinner /> : orders.length === 0 ? (
+      <div className="data-table-wrap">
+        {loading ? (
+          <LoadingSpinner />
+        ) : orders.length === 0 ? (
           <EmptyState icon="📭" title="No orders found" desc="Try adjusting your search or filters" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table">
               <thead>
-                <tr className="border-b border-white/5">
+                <tr>
                   {['Tag ID', 'Customer', 'Status', 'Amount', 'Date', 'Payment'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-white/30 text-xs font-medium uppercase tracking-wider">{h}</th>
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {orders.map(order => (
-                  <OrderRow key={order._id} order={order} onClick={() => navigate(`/dashboard/orders/${order._id}`)} />
+                  <OrderRow
+                    key={order._id}
+                    order={order}
+                    onClick={() => navigate(`/dashboard/orders/${order._id}`)}
+                  />
                 ))}
               </tbody>
             </table>
@@ -182,6 +253,7 @@ function StaffOrders() {
   );
 }
 
+/* ---- Customers Tab ---- */
 function StaffCustomers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -197,42 +269,69 @@ function StaffCustomers() {
     }
   }, [search]);
 
-  useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); }, [load]);
+  useEffect(() => {
+    const t = setTimeout(load, 300);
+    return () => clearTimeout(t);
+  }, [load]);
 
   return (
-    <div className="space-y-4">
-      <div className="relative">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
-        <input className="input-field pl-10" placeholder="Search customers by name, phone, email..." value={search} onChange={e => setSearch(e.target.value)} />
+    <div>
+      <div className="field-icon-wrap" style={{ marginBottom: 16 }}>
+        <span className="icon"><Search size={16} /></span>
+        <input
+          className="input-field pl-11"
+          placeholder="Search customers by name, phone, email..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
-      <div className="glass-card overflow-hidden">
-        <div className="px-6 py-3 border-b border-white/5">
-          <span className="text-white/40 text-sm">{customers.length} customers</span>
+      <div className="data-table-wrap">
+        <div className="data-table-header">
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{customers.length} customers</span>
         </div>
-        {loading ? <LoadingSpinner /> : customers.length === 0 ? (
+        {loading ? (
+          <LoadingSpinner />
+        ) : customers.length === 0 ? (
           <EmptyState icon="👥" title="No customers found" desc="Customers appear after they register or are created" />
         ) : (
-          <div className="divide-y divide-white/5">
-            {customers.map((c, i) => (
-              <motion.div key={c._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
-                className="px-6 py-4 flex items-center justify-between hover:bg-white/3 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400/30 to-cyan-500/30 flex items-center justify-center font-bold text-white/80 text-sm">
+          <div>
+            {customers.map(c => (
+              <div
+                key={c._id}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 20px', borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: '#f5eef6', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', fontWeight: 700, color: 'var(--primary)', fontSize: '0.9rem',
+                  }}>
                     {c.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div className="text-white font-medium text-sm">{c.name}</div>
-                    <div className="text-white/40 text-xs">{c.phone} • {c.email}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>{c.name}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{c.phone} • {c.email}</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${c.isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}`}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span
+                    className="badge"
+                    style={{
+                      backgroundColor: c.isActive ? '#e8f5e9' : '#fdecea',
+                      color: c.isActive ? '#2e7d32' : '#c62828',
+                    }}
+                  >
                     {c.isActive ? 'Active' : 'Inactive'}
                   </span>
-                  <span className="text-white/25 text-xs">{new Date(c.createdAt).toLocaleDateString('en-IN')}</span>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                    {new Date(c.createdAt).toLocaleDateString('en-IN')}
+                  </span>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         )}

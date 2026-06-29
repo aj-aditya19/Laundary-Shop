@@ -1,0 +1,219 @@
+/* =============================================
+   NAVBAR
+   ============================================= */
+
+.navbar {
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+/* Logo */
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.navbar-logo-icon {
+  width: 36px;
+  height: 36px;
+  background-color: var(--primary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.navbar-logo-text {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.navbar-logo-text span {
+  color: var(--primary);
+}
+
+/* Desktop Nav Links */
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.navbar-links button,
+.navbar-links a {
+  display: block;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.navbar-links button:hover,
+.navbar-links a:hover {
+  color: var(--primary);
+  background-color: #f5eef6;
+}
+
+/* Auth buttons */
+.navbar-auth {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.navbar-user-avatar {
+  width: 34px;
+  height: 34px;
+  background-color: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.navbar-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.navbar-user-btn:hover {
+  color: var(--primary);
+  background-color: #f5eef6;
+}
+
+.navbar-logout-btn {
+  padding: 6px 10px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-logout-btn:hover {
+  color: #c62828;
+  background-color: #fdecea;
+}
+
+/* Hamburger */
+.navbar-hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 6px;
+}
+
+.navbar-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background-color: var(--text);
+  border-radius: 2px;
+}
+
+/* Mobile Menu */
+.navbar-mobile {
+  display: none;
+  flex-direction: column;
+  background-color: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px 16px;
+  gap: 2px;
+}
+
+.navbar-mobile.open {
+  display: flex;
+}
+
+.navbar-mobile button,
+.navbar-mobile a {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 11px 14px;
+  font-size: 0.93rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.navbar-mobile button:hover,
+.navbar-mobile a:hover {
+  color: var(--primary);
+  background-color: #f5eef6;
+}
+
+.navbar-mobile-divider {
+  height: 1px;
+  background-color: var(--border);
+  margin: 10px 0;
+}
+
+.navbar-mobile-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navbar-links,
+  .navbar-auth {
+    display: none;
+  }
+
+  .navbar-hamburger {
+    display: flex;
+  }
+}

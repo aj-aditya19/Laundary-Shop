@@ -1,91 +1,98 @@
-import { motion } from 'framer-motion';
 import { workflowSteps } from '../../data';
+import { CheckCircle } from 'lucide-react';
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-24 bg-navy-900/50 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-[0.015]" style={{
-        backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(56,189,248,1) 1px, transparent 0)',
-        backgroundSize: '48px 48px'
-      }} />
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-16"
-        >
-          <p className="section-label mb-3">Simple Process</p>
-          <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-4">
-            How It <span className="gradient-text">Works</span>
-          </h2>
-          <p className="text-white/40 text-lg max-w-xl mx-auto">
+    <section id="how-it-works" className="section how-section">
+      <div className="container">
+        <div className="text-center">
+          <span className="section-label">Simple Process</span>
+          <h2 className="section-title">How It <span>Works</span></h2>
+          <p className="section-desc" style={{ margin: '0 auto 48px' }}>
             From drop-off to pickup — a seamless, transparent 7-step process.
           </p>
-        </motion.div>
+        </div>
 
-        {/* Timeline */}
-        <div className="relative">
-          {/* Vertical line */}
-          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-sky-500/50 via-cyan-500/30 to-transparent -translate-x-1/2 hidden md:block" />
+        {/* Desktop timeline (hidden on mobile via CSS) */}
+        <div className="timeline" style={{ position: 'relative' }}>
+          <div className="timeline-line" />
 
-          <div className="space-y-8">
-            {workflowSteps.map((step, i) => {
-              const isLeft = i % 2 === 0;
-              return (
-                <motion.div
-                  key={step.step}
-                  initial={{ opacity: 0, x: isLeft ? -40 : 40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: '-50px' }}
-                  transition={{ duration: 0.6, delay: i * 0.1 }}
-                  className={`flex items-center gap-6 md:gap-0 ${isLeft ? 'md:flex-row' : 'md:flex-row-reverse'}`}
-                >
-                  {/* Card */}
-                  <div className={`flex-1 ${isLeft ? 'md:pr-12 md:text-right' : 'md:pl-12 md:text-left'}`}>
-                    <div className={`glass-card p-6 inline-block max-w-sm group hover:border-sky-500/30 transition-all duration-300 ${isLeft ? 'md:ml-auto' : ''}`}>
-                      <div className="flex items-center gap-3 mb-3" style={{ flexDirection: isLeft ? 'row-reverse' : 'row' }}>
-                        <span className="text-3xl">{step.icon}</span>
-                        <div>
-                          <div className="text-white/30 text-xs font-mono">Step {step.step}</div>
-                          <h3 className="font-display font-bold text-white text-lg leading-tight">{step.title}</h3>
-                        </div>
+          {workflowSteps.map((step, i) => {
+            const isLeft = i % 2 === 0;
+            return (
+              <div key={step.step} className="timeline-item">
+                {/* Left card */}
+                {isLeft ? (
+                  <div className="timeline-card" style={{ marginRight: 24, marginLeft: 'auto' }}>
+                    <div className="timeline-card-header">
+                      <span className="timeline-card-emoji">{step.icon}</span>
+                      <div>
+                        <div className="timeline-card-step">Step {step.step}</div>
+                        <div className="timeline-card-title">{step.title}</div>
                       </div>
-                      <p className="text-white/50 text-sm">{step.desc}</p>
-                      {step.highlight && (
-                        <div className="mt-3 inline-flex items-center gap-2 bg-sky-500/10 border border-sky-500/20 rounded-lg px-3 py-1.5">
-                          <span className="text-sky-400 font-mono font-bold text-sm">{step.highlight}</span>
-                        </div>
-                      )}
                     </div>
+                    <p className="timeline-card-desc">{step.desc}</p>
+                    {step.highlight && (
+                      <span className="timeline-card-highlight">{step.highlight}</span>
+                    )}
                   </div>
+                ) : (
+                  <div className="timeline-spacer" />
+                )}
 
-                  {/* Center dot */}
-                  <div className="relative flex-shrink-0 w-12 h-12 hidden md:flex items-center justify-center">
-                    <motion.div
-                      whileInView={{ scale: [0, 1.2, 1] }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.5, delay: i * 0.1 + 0.2 }}
-                      className="w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-bold font-display z-10"
-                      style={{ borderColor: step.color, background: `${step.color}18`, color: step.color }}
-                    >
-                      {step.step}
-                    </motion.div>
-                    <div className="absolute inset-0 rounded-full blur-sm" style={{ background: `${step.color}20` }} />
+                {/* Center dot */}
+                <div
+                  className="timeline-dot"
+                  style={{ borderColor: step.color, color: step.color, backgroundColor: `${step.color}18` }}
+                >
+                  {step.step}
+                </div>
+
+                {/* Right card */}
+                {!isLeft ? (
+                  <div className="timeline-card" style={{ marginLeft: 24 }}>
+                    <div className="timeline-card-header">
+                      <span className="timeline-card-emoji">{step.icon}</span>
+                      <div>
+                        <div className="timeline-card-step">Step {step.step}</div>
+                        <div className="timeline-card-title">{step.title}</div>
+                      </div>
+                    </div>
+                    <p className="timeline-card-desc">{step.desc}</p>
+                    {step.highlight && (
+                      <span className="timeline-card-highlight">{step.highlight}</span>
+                    )}
                   </div>
+                ) : (
+                  <div className="timeline-spacer" />
+                )}
+              </div>
+            );
+          })}
+        </div>
 
-                  {/* Mobile: step number */}
-                  <div className="md:hidden flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-bold font-display"
-                    style={{ borderColor: step.color, color: step.color }}>
-                    {step.step}
-                  </div>
-
-                  <div className="flex-1 hidden md:block" />
-                </motion.div>
-              );
-            })}
-          </div>
+        {/* Mobile timeline (shown on mobile via CSS) */}
+        <div className="timeline-mobile">
+          {workflowSteps.map(step => (
+            <div key={step.step} className="timeline-mobile-item">
+              <div
+                className="timeline-mobile-dot"
+                style={{ borderColor: step.color, color: step.color }}
+              >
+                {step.step}
+              </div>
+              <div className="timeline-mobile-card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: '1.3rem' }}>{step.icon}</span>
+                  <strong style={{ fontSize: '0.92rem', color: 'var(--text)' }}>{step.title}</strong>
+                </div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{step.desc}</p>
+                {step.highlight && (
+                  <span className="timeline-card-highlight" style={{ marginTop: 8 }}>{step.highlight}</span>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>

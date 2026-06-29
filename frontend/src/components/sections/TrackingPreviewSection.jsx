@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Package, Waves, Wind, Zap, CheckCircle, Bell, Truck } from 'lucide-react';
 import { orderAPI } from '../../services/api';
 
 const STAGES = [
-  { key: 'received', label: 'Received', icon: Package, color: '#38BDF8' },
-  { key: 'washing', label: 'Washing', icon: Waves, color: '#8B5CF6' },
-  { key: 'dry_cleaning', label: 'Dry Cleaning', icon: Wind, color: '#06B6D4' },
-  { key: 'ironing', label: 'Ironing', icon: Zap, color: '#F59E0B' },
-  { key: 'quality_check', label: 'Quality Check', icon: CheckCircle, color: '#EC4899' },
-  { key: 'ready', label: 'Ready', icon: Bell, color: '#10B981' },
-  { key: 'delivered', label: 'Delivered', icon: Truck, color: '#6EE7B7' },
+  { key: 'received',      label: 'Received',      icon: Package,     emoji: '📦' },
+  { key: 'washing',       label: 'Washing',        icon: Waves,       emoji: '🌊' },
+  { key: 'dry_cleaning',  label: 'Dry Cleaning',   icon: Wind,        emoji: '💨' },
+  { key: 'ironing',       label: 'Ironing',        icon: Zap,         emoji: '⚡' },
+  { key: 'quality_check', label: 'Quality Check',  icon: CheckCircle, emoji: '🔍' },
+  { key: 'ready',         label: 'Ready',          icon: Bell,        emoji: '🎉' },
+  { key: 'delivered',     label: 'Delivered',      icon: Truck,       emoji: '✅' },
 ];
 
 export default function TrackingPreviewSection() {
@@ -35,132 +34,79 @@ export default function TrackingPreviewSection() {
     }
   };
 
-  const currentStageIndex = order ? STAGES.findIndex(s => s.key === order.status) : -1;
+  const currentIndex = order ? STAGES.findIndex(s => s.key === order.status) : -1;
+  const progressPct = currentIndex >= 0 ? (currentIndex / (STAGES.length - 1)) * 100 : 0;
 
   return (
-    <section id="tracking" className="py-24 bg-navy-900/40 relative overflow-hidden">
-      <div className="absolute inset-0 bg-hero-gradient opacity-30 pointer-events-none" />
+    <section id="tracking" className="section tracking-section">
+      <div className="container" style={{ maxWidth: 760 }}>
+        <div className="text-center">
+          <span className="section-label">Live Tracking</span>
+          <h2 className="section-title">Track Your <span>Order</span></h2>
+          <p className="section-desc" style={{ margin: '0 auto 36px' }}>
+            Enter your Tag ID to see real-time status of your garments.
+          </p>
+        </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
-          <p className="section-label mb-3">Live Tracking</p>
-          <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-4">
-            Track Your <span className="gradient-text">Order</span>
-          </h2>
-          <p className="text-white/40 text-lg">Enter your Tag ID to see real-time status of your garments.</p>
-        </motion.div>
-
-        {/* Search bar */}
-        <motion.form
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          onSubmit={handleTrack}
-          className="flex gap-3 mb-10"
-        >
-          <div className="relative flex-1">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
+        {/* Search form */}
+        <form className="track-form-wrap" onSubmit={handleTrack}>
+          <div className="track-input-wrap">
+            <span className="track-input-icon"><Search size={18} /></span>
             <input
+              className="track-input"
               value={tagId}
               onChange={e => setTagId(e.target.value)}
               placeholder="Enter Tag ID  e.g. DC-2026-1203"
-              className="input-field pl-12 font-mono text-lg h-14"
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary h-14 px-8 flex items-center gap-2 min-w-[120px] justify-center"
-          >
-            {loading ? <div className="w-5 h-5 spinner" /> : <><Search size={18} /> Track</>}
+          <button type="submit" className="track-submit-btn" disabled={loading}>
+            {loading ? <span className="spinner" /> : <><Search size={17} /> Track</>}
           </button>
-        </motion.form>
+        </form>
 
         {/* Error */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="mb-6 glass-card p-4 border-red-500/20 bg-red-500/5 text-red-400 text-sm text-center"
-            >
-              {error}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {error && (
+          <div className="alert alert-error">{error}</div>
+        )}
 
         {/* Result */}
-        <AnimatePresence>
-          {order && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="glass-card p-8"
-            >
-              {/* Order header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 pb-6 border-b border-white/5">
-                <div>
-                  <div className="text-white/40 text-xs mb-1">Tag ID</div>
-                  <div className="font-mono font-bold text-sky-400 text-2xl">{order.tagId}</div>
-                  <div className="text-white/50 text-sm mt-1">{order.customerName}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-white/40 text-xs mb-1">Service</div>
-                  <div className={`status-badge ${order.serviceType === 'express' ? 'bg-amber-500/20 text-amber-300' : 'bg-sky-500/20 text-sky-300'}`}>
-                    {order.serviceType === 'express' ? '⚡ Express' : '📦 Normal'}
-                  </div>
-                  <div className="text-white/40 text-xs mt-2">Expected: {new Date(order.expectedCompletionDate).toLocaleDateString('en-IN')}</div>
+        {order && (
+          <div className="track-result">
+            {/* Header */}
+            <div className="track-result-header">
+              <div>
+                <div className="track-result-tagid">{order.tagId}</div>
+                <div className="track-result-name">{order.customerName}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span className={`track-result-service ${order.serviceType === 'express' ? 'express' : 'normal'}`}>
+                  {order.serviceType === 'express' ? '⚡ Express' : '📦 Normal'}
+                </span>
+                <div className="track-result-expected">
+                  Expected: {new Date(order.expectedCompletionDate).toLocaleDateString('en-IN')}
                 </div>
               </div>
+            </div>
 
-              {/* Progress stages */}
-              <div className="relative mb-8">
-                {/* Progress bar */}
-                <div className="absolute top-5 left-0 right-0 h-0.5 bg-white/5" />
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(currentStageIndex / (STAGES.length - 1)) * 100}%` }}
-                  transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
-                  className="absolute top-5 left-0 h-0.5 bg-gradient-to-r from-sky-400 to-cyan-400"
-                />
-
-                <div className="relative flex justify-between">
+            {/* Stages */}
+            <div className="stages-wrap">
+              <div className="stages-bar-outer" style={{ paddingBottom: 52 }}>
+                <div className="stages-track" />
+                <div className="stages-progress" style={{ width: `${progressPct}%` }} />
+                <div className="stages-row">
                   {STAGES.map((stage, i) => {
                     const Icon = stage.icon;
-                    const done = i <= currentStageIndex;
-                    const active = i === currentStageIndex;
+                    const done = i <= currentIndex;
+                    const active = i === currentIndex;
                     return (
-                      <div key={stage.key} className="flex flex-col items-center gap-2">
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ delay: i * 0.08, type: 'spring' }}
-                          className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 relative z-10 ${
-                            active
-                              ? 'border-sky-400 bg-sky-400/20 shadow-lg shadow-sky-400/30'
-                              : done
-                              ? 'border-emerald-400 bg-emerald-400/20'
-                              : 'border-white/10 bg-navy-950'
-                          }`}
-                        >
-                          {active && (
-                            <motion.div
-                              animate={{ scale: [1, 1.3, 1] }}
-                              transition={{ duration: 2, repeat: Infinity }}
-                              className="absolute inset-0 rounded-full border border-sky-400/50"
-                            />
-                          )}
-                          <Icon size={16} style={{ color: done ? (active ? stage.color : '#10B981') : 'rgba(255,255,255,0.2)' }} />
-                        </motion.div>
-                        <span className={`text-[10px] text-center leading-tight max-w-[60px] hidden sm:block ${done ? 'text-white/70' : 'text-white/25'}`}>
+                      <div key={stage.key} className="stage-item">
+                        <div className={`stage-dot ${active ? 'active' : done ? 'done' : ''}`}>
+                          {done && !active
+                            ? <CheckCircle size={16} style={{ color: '#4caf50' }} />
+                            : <Icon size={15} style={{ color: active ? 'var(--primary)' : done ? '#4caf50' : 'var(--border)' }} />
+                          }
+                        </div>
+                        <span className={`stage-label ${active ? 'active' : done ? 'done' : ''}`}>
                           {stage.label}
                         </span>
                       </div>
@@ -168,52 +114,56 @@ export default function TrackingPreviewSection() {
                   })}
                 </div>
               </div>
+            </div>
 
-              {/* Current status callout */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-                className="rounded-xl p-4 text-center mb-6"
-                style={{ background: `${STAGES[currentStageIndex]?.color}15`, border: `1px solid ${STAGES[currentStageIndex]?.color}30` }}
+            {/* Current status callout */}
+            {currentIndex >= 0 && (
+              <div
+                className="track-status-callout"
+                style={{
+                  background: '#f9f5fa',
+                  border: '1px solid #e0d4e3',
+                  margin: '0 24px 24px',
+                  borderRadius: 12,
+                  padding: 20,
+                  textAlign: 'center',
+                }}
               >
-                <div className="text-2xl mb-1">{['📦', '🌊', '💨', '⚡', '🔍', '🎉', '✅'][currentStageIndex]}</div>
-                <div className="font-display font-bold text-white text-xl">
-                  {STAGES[currentStageIndex]?.label}
-                </div>
+                <div className="track-status-callout-emoji">{STAGES[currentIndex].emoji}</div>
+                <div className="track-status-callout-title">{STAGES[currentIndex].label}</div>
                 {order.status === 'ready' && (
-                  <p className="text-emerald-400 text-sm mt-1">Your clothes are ready for pickup!</p>
+                  <div className="track-status-callout-sub">Your clothes are ready for pickup!</div>
                 )}
-              </motion.div>
+                {order.status === 'delivered' && (
+                  <div className="track-status-callout-sub">Order completed. Thank you!</div>
+                )}
+              </div>
+            )}
 
-              {/* Recent history */}
-              {order.statusHistory?.length > 0 && (
-                <div>
-                  <div className="text-white/30 text-xs font-semibold uppercase tracking-wider mb-3">Recent Updates</div>
-                  <div className="space-y-2">
-                    {[...order.statusHistory].reverse().slice(0, 3).map((h, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm py-2 border-b border-white/5 last:border-0">
-                        <span className="text-white/60">{STAGES.find(s => s.key === h.status)?.label || h.status}</span>
-                        <span className="text-white/30 text-xs">{new Date(h.timestamp).toLocaleString('en-IN')}</span>
-                      </div>
-                    ))}
+            {/* History */}
+            {order.statusHistory?.length > 0 && (
+              <div className="track-history">
+                <div className="track-history-title">Recent Updates</div>
+                {[...order.statusHistory].reverse().slice(0, 3).map((h, i) => (
+                  <div key={i} className="track-history-row">
+                    <span className="track-history-status">
+                      {STAGES.find(s => s.key === h.status)?.label || h.status}
+                    </span>
+                    <span className="track-history-time">
+                      {new Date(h.timestamp).toLocaleString('en-IN')}
+                    </span>
                   </div>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Demo hint */}
+        {/* Hint text */}
         {!order && !error && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center text-white/25 text-sm mt-4"
-          >
+          <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 16 }}>
             Your Tag ID is printed on your receipt and sent via email when you drop off clothes.
-          </motion.p>
+          </p>
         )}
       </div>
     </section>

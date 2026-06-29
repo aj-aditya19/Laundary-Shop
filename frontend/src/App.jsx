@@ -16,14 +16,16 @@ import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen bg-navy-950 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 spinner" />
-        <p className="text-white/50 text-sm">Loading...</p>
+
+  if (loading) {
+    return (
+      <div className="loading-page">
+        <div className="spinner spinner-lg" />
+        <p>Loading...</p>
       </div>
-    </div>
-  );
+    );
+  }
+
   if (!user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
@@ -44,9 +46,15 @@ export default function App() {
         <Toaster
           position="top-right"
           toastOptions={{
-            style: { background: '#1e293b', color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.1)' },
-            success: { iconTheme: { primary: '#10B981', secondary: '#fff' } },
-            error: { iconTheme: { primary: '#EF4444', secondary: '#fff' } },
+            style: {
+              background: '#fff',
+              color: '#2A3C52',
+              border: '1px solid #C6BCC0',
+              borderRadius: '12px',
+              fontSize: '0.9rem',
+            },
+            success: { iconTheme: { primary: '#614668', secondary: '#fff' } },
+            error:   { iconTheme: { primary: '#c62828', secondary: '#fff' } },
           }}
         />
         <Routes>

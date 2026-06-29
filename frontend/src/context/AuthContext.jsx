@@ -14,8 +14,15 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('sparkle_token');
     if (token) {
       authAPI.getMe()
-        .then(({ data }) => { setUser(data.user); localStorage.setItem('sparkle_user', JSON.stringify(data.user)); })
-        .catch(() => { localStorage.removeItem('sparkle_token'); localStorage.removeItem('sparkle_user'); setUser(null); })
+        .then(({ data }) => {
+          setUser(data.user);
+          localStorage.setItem('sparkle_user', JSON.stringify(data.user));
+        })
+        .catch(() => {
+          localStorage.removeItem('sparkle_token');
+          localStorage.removeItem('sparkle_user');
+          setUser(null);
+        })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
